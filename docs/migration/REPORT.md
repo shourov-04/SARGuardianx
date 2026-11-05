@@ -54,11 +54,11 @@ Local checks completed:
 
 ## Publication and outstanding CI
 
-Code and archive tags are published to `shourov-04/SARGuardian`. The migration remains reviewable on `migration/consolidate-render`; `main` contains only the initialization README until Linux CI and review pass.
+Code and all 616 archive tags are published to `shourov-04/SARGuardian`. [Draft PR #1](https://github.com/shourov-04/SARGuardian/pull/1) contains the migration; `main` contains only the initialization README until review and merge.
 
-Hosted Linux CI status is recorded after the destination run completes. Existing local Ubuntu/WSL is unavailable because its registered virtual disk path is missing, so the Windows/POSIX limitations listed above require the hosted runner check.
+Both destination Linux validations passed at migration commit `9e6d0a19591cb572d76763131a30a36272eaed33`: [PR run 42105776448](https://github.com/shourov-04/SARGuardian/actions/runs/42105776448) and [push run 42105750259](https://github.com/shourov-04/SARGuardian/actions/runs/42105750259). This closes the local Windows/POSIX test gap recorded above for the current migration commit.
 
-Inspect the destination CI result and complete the migration review before merging to `main`. GitHub Actions access is also required for the website's scientific processing workflows. No force-push or existing source change was made.
+Complete the migration review before merging to `main`. No force-push or existing source change was made.
 
 Local test evidence does not imply hosted integration or operational pilot success.
 

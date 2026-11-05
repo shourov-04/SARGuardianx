@@ -2,7 +2,7 @@
 
 এই repo থেকে **দুটি service** হবে: frontend Static Site এবং backend Python Web Service। Scientific processing আগের মতো GitHub Actions-এ চলে; Render API job তৈরি, dispatch, callback, dashboard এবং archive পরিবেশন করে।
 
-বর্তমান handoff: code `shourov-04/SARGuardian`-এর migration branch-এ প্রস্তুত। নতুন repo-র Linux CI pass ও migration review শেষ করে `main`-এ নিন। CI runner unavailable থাকলে science processing job-ও start হবে না।
+বর্তমান handoff: code [migration PR #1](https://github.com/shourov-04/SARGuardian/pull/1)-এ প্রস্তুত এবং নতুন repo-র Linux CI pass করেছে। Migration review শেষ করে `main`-এ নিন।
 
 ## ১. Code branch এবং service setup
 
