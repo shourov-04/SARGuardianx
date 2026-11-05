@@ -2,11 +2,11 @@
 
 এই repo থেকে **দুটি service** হবে: frontend Static Site এবং backend Python Web Service। Scientific processing আগের মতো GitHub Actions-এ চলে; Render API job তৈরি, dispatch, callback, dashboard এবং archive পরিবেশন করে।
 
-বর্তমান handoff: code [migration PR #1](https://github.com/Sagormodak/SARGuardian/pull/1)-এ আছে। GitHub Actions account restriction-এর কারণে Linux CI start হয়নি। সেটি ঠিক করে CI rerun/review ও merge সম্পন্ন করুন। এই restriction থাকলে science processing job-ও start হবে না।
+বর্তমান handoff: code `shourov-04/SARGuardian`-এর migration branch-এ প্রস্তুত। নতুন repo-র Linux CI pass ও migration review শেষ করে `main`-এ নিন। CI runner unavailable থাকলে science processing job-ও start হবে না।
 
 ## ১. Code branch এবং service setup
 
-Migration branch-এর CI ও migration report review করে code `main`-এ নেওয়ার পরে Render → New → Blueprint থেকে `Sagormodak/SARGuardian` বেছে নিন। Root-এর `render.yaml` ব্যবহার করুন। Blueprint এখানে শুধু প্রস্তুত করা হয়েছে; কোনো service তৈরি বা deploy করা হয়নি।
+Migration branch-এর CI ও migration report review করে code `main`-এ নেওয়ার পরে Render → New → Blueprint থেকে `shourov-04/SARGuardian` বেছে নিন। Root-এর `render.yaml` ব্যবহার করুন। Blueprint এখানে শুধু প্রস্তুত করা হয়েছে; কোনো service তৈরি বা deploy করা হয়নি।
 
 Manual setup করলেও একই settings ব্যবহার করবেন:
 
@@ -38,18 +38,18 @@ Frontend-এ SPA rewrite `/*` → `/index.html` রাখুন; Blueprint-এ �
 | `GOOGLE_DRIVE_OAUTH_CLIENT_JSON` | private results ব্যবহারকারী Drive OAuth client JSON |
 | `GOOGLE_DRIVE_REFRESH_TOKEN` | ঐ Drive identity-র refresh token |
 | `GOOGLE_DRIVE_FOLDER_ID` | worker-এর result folder-টির ID |
-| `GITHUB_ACTIONS_TOKEN` | নতুন `Sagormodak/SARGuardian` repo-তে Actions read/write এবং Contents read অনুমতিসহ token |
-| `GITHUB_ACTIONS_REPOSITORY` | `Sagormodak/SARGuardian` |
+| `GITHUB_ACTIONS_TOKEN` | নতুন `shourov-04/SARGuardian` repo-তে Actions read/write এবং Contents read অনুমতিসহ token |
+| `GITHUB_ACTIONS_REPOSITORY` | `shourov-04/SARGuardian` |
 | `GITHUB_ACTIONS_WORKFLOW` | `sarguardian-displacement.yml` |
 | `GITHUB_ACTIONS_REF` | `main` |
 | `PUBLIC_API_URL` | backend service-এর পূর্ণ public HTTPS URL; `/api` বা callback path যোগ করবেন না |
 | `DISPLACEMENT_CALLBACK_SECRET` | নিজের তৈরি দীর্ঘ random secret; Actions-এর একই নামের secret-এর সঙ্গে এক হতে হবে |
 | `DISPLACEMENT_ACTIONS_ENABLED` | setup চলাকালে `false`; secrets/schema/token ঠিক হলে `true`; Known Place launcher-ও এই switch ব্যবহার করে |
-| `KNOWN_PLACE_REPOSITORY` | `Sagormodak/SARGuardian` |
+| `KNOWN_PLACE_REPOSITORY` | `shourov-04/SARGuardian` |
 | `KNOWN_PLACE_REF` | `main` |
-| `KNOWN_PLACE_PAPER_REPOSITORY` | `Sagormodak/SARGuardian` |
+| `KNOWN_PLACE_PAPER_REPOSITORY` | `shourov-04/SARGuardian` |
 | `KNOWN_PLACE_PAPER_REF` | `main` |
-| `RIVERSHIFT_GITHUB_ACTIONS_REPOSITORY` | `Sagormodak/SARGuardian` |
+| `RIVERSHIFT_GITHUB_ACTIONS_REPOSITORY` | `shourov-04/SARGuardian` |
 | `RIVERSHIFT_GITHUB_ACTIONS_WORKFLOW` | `river-shift-gcov-process.yml` |
 | `RIVERSHIFT_GITHUB_ACTIONS_REF` | `main` |
 | `RIVERSHIFT_CALLBACK_SECRET` | Actions-এর একই নামের secret-এর সঙ্গে এক হতে হবে |
@@ -79,7 +79,7 @@ Firebase Authentication-এ Google provider enable করুন এবং Author
 
 ## ৪. নতুন repo-র GitHub Actions secrets
 
-GitHub → `Sagormodak/SARGuardian` → Settings → Secrets and variables → Actions-এ দিন:
+GitHub → `shourov-04/SARGuardian` → Settings → Secrets and variables → Actions-এ দিন:
 
 | Secret | Consumer |
 |---|---|

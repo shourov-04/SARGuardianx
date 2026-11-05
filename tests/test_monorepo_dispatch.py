@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'apps/dynamic/Backe
 def known_place(monkeypatch):
     from app import known_place as module
     with monkeypatch.context() as env:
-        env.setenv('KNOWN_PLACE_REPOSITORY', 'Sagormodak/SARGuardian')
+        env.setenv('KNOWN_PLACE_REPOSITORY', 'shourov-04/SARGuardian')
         env.setenv('KNOWN_PLACE_REF', 'migration/consolidate-render')
         importlib.reload(module)
         yield module
@@ -28,12 +28,12 @@ def test_generic_and_paper_dispatch_use_target_repository(known_place, monkeypat
         analysis_mode='exploratory', polarization='HH', track='ANY', direction='A', coherence_neighbours='5',
     )
     result = known_place.dispatch_known_place_analysis(settings, request)
-    assert result.github_run_url.startswith('https://github.com/Sagormodak/SARGuardian/actions/')
-    assert seen[0][1] == '/repos/Sagormodak/SARGuardian/actions/workflows/know-place-aoi-dispatcher.yml/dispatches'
+    assert result.github_run_url.startswith('https://github.com/shourov-04/SARGuardian/actions/')
+    assert seen[0][1] == '/repos/shourov-04/SARGuardian/actions/workflows/know-place-aoi-dispatcher.yml/dispatches'
     assert seen[0][2]['ref'] == 'migration/consolidate-render'
     assert seen[0][2]['inputs']['execute_downloads'] is False
     assert seen[0][2]['inputs']['consent_marker'] == ''
-    assert known_place.KNOWN_PLACE_PAPER_REPOSITORY == 'Sagormodak/SARGuardian'
+    assert known_place.KNOWN_PLACE_PAPER_REPOSITORY == 'shourov-04/SARGuardian'
     assert known_place.KNOWN_PLACE_PAPER_REF == 'migration/consolidate-render'
 
 def test_status_and_artifact_lookup_use_same_repository(known_place, monkeypatch):
@@ -44,4 +44,4 @@ def test_status_and_artifact_lookup_use_same_repository(known_place, monkeypatch
     known_place.get_known_place_analysis_status(settings, str(uuid4()))
     known_place.get_known_place_paper_reproduction_status(settings, str(uuid4()))
     assert len(seen) == 2
-    assert all(path.startswith('/repos/Sagormodak/SARGuardian/actions/workflows/') for path in seen)
+    assert all(path.startswith('/repos/shourov-04/SARGuardian/actions/workflows/') for path in seen)

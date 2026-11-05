@@ -32,7 +32,7 @@ services:
       - key: GITHUB_ACTIONS_TOKEN
         sync: false
       - key: GITHUB_ACTIONS_REPOSITORY
-        value: Sagormodak/SARGuardian
+        value: shourov-04/SARGuardian
       - key: GITHUB_ACTIONS_WORKFLOW
         value: sarguardian-displacement.yml
       - key: GITHUB_ACTIONS_REF
@@ -44,17 +44,17 @@ services:
       - key: PUBLIC_API_URL
         sync: false
       - key: KNOWN_PLACE_REPOSITORY
-        value: Sagormodak/SARGuardian
+        value: shourov-04/SARGuardian
       - key: KNOWN_PLACE_REF
         value: main
       - key: KNOWN_PLACE_PAPER_REPOSITORY
-        value: Sagormodak/SARGuardian
+        value: shourov-04/SARGuardian
       - key: KNOWN_PLACE_PAPER_REF
         value: main
       - key: RIVERSHIFT_ACTIONS_ENABLED
         value: "false"
       - key: RIVERSHIFT_GITHUB_ACTIONS_REPOSITORY
-        value: Sagormodak/SARGuardian
+        value: shourov-04/SARGuardian
       - key: RIVERSHIFT_GITHUB_ACTIONS_WORKFLOW
         value: river-shift-gcov-process.yml
       - key: RIVERSHIFT_GITHUB_ACTIONS_REF

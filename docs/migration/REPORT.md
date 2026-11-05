@@ -1,6 +1,6 @@
 # Migration report — 2026-11-06
 
-Destination: `Sagormodak/SARGuardian`. Working branch: `migration/consolidate-render`.
+Destination: `shourov-04/SARGuardian`. Working branch: `migration/consolidate-render`.
 
 ## Source preservation
 
@@ -20,7 +20,7 @@ The import manifest covers **1,102 files**, including the three main snapshots, 
 
 ## Runtime adaptation
 
-Only `apps/dynamic/Backend/app/known_place.py` differs from its source snapshot: environment variables now configure the generic and author-exact repository/ref. Source defaults remain compatible. The Render configuration explicitly points both workflows to `Sagormodak/SARGuardian`.
+Only `apps/dynamic/Backend/app/known_place.py` differs from its source snapshot: environment variables now configure the generic and author-exact repository/ref. Source defaults remain compatible. The Render configuration explicitly points both workflows to `shourov-04/SARGuardian`.
 
 See [exact patch](runtime-adaptation.patch) and [before/after hashes](adaptations.json). No scientific method, product identity, output interpretation, API authentication, callback signing, retention logic or database schema was changed.
 
@@ -54,11 +54,11 @@ Local checks completed:
 
 ## Publication and outstanding CI
 
-All code and archive tags are published. [Draft PR #1](https://github.com/Sagormodak/SARGuardian/pull/1) contains the migration; `main` currently contains only the initialization README.
+Code and archive tags are published to `shourov-04/SARGuardian`. The migration remains reviewable on `migration/consolidate-render`; `main` contains only the initialization README until Linux CI and review pass.
 
-[Linux CI run 42103606490](https://github.com/Sagormodak/SARGuardian/actions/runs/42103606490) could not allocate any runner because of a GitHub account-level Actions restriction. All seven jobs ended before their first step; **no Linux test executed**, so this run is not a test-suite result. Existing local Ubuntu/WSL was also unavailable because its registered virtual disk path is missing. The Windows/POSIX limitations listed above remain unverified on Linux.
+Hosted Linux CI status is recorded after the destination run completes. Existing local Ubuntu/WSL is unavailable because its registered virtual disk path is missing, so the Windows/POSIX limitations listed above require the hosted runner check.
 
-Resolve the GitHub Actions account restriction, rerun Monorepo validation, inspect the results, and complete the migration review before merging to `main`. The same runner restriction also prevents the website's scientific processing workflows from starting. Render secrets alone do not resolve it. No force-push or existing source change was made.
+Inspect the destination CI result and complete the migration review before merging to `main`. GitHub Actions access is also required for the website's scientific processing workflows. No force-push or existing source change was made.
 
 Local test evidence does not imply hosted integration or operational pilot success.
 
