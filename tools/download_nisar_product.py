@@ -213,7 +213,14 @@ def _sleep_before_retry(stage: str, attempt: int, detail: str) -> None:
 def build_authenticated_session_with_retry(
     acquisition: Any, attempts: int = 2, *, force_credentials: bool = False
 ) -> Any:
-    """Build a bearer-authenticated ASF session without the unrelated cookie flow."""
+    """Build an authenticated ASF session with bounded network requests.
+
+    Username/password authentication must use ASF's complete login flow.  In
+    addition to obtaining an EDL bearer token, that flow installs the
+    ``asf-urs`` cookie used by protected ASF download endpoints.  Installing
+    only the bearer token can authenticate successfully against EDL and still
+    produce a 401 when the NISAR object is requested.
+    """
     token = os.environ.get("EARTHDATA_TOKEN", "").strip()
     if token and not force_credentials:
         import asf_search
@@ -248,37 +255,28 @@ def build_authenticated_session_with_retry(
         raise RuntimeError("EARTHDATA_AUTHENTICATION_RETRIES_EXHAUSTED")
 
     import asf_search
-    from requests.auth import HTTPBasicAuth
+    ASFAuthenticationError = asf_search.ASFAuthenticationError
 
-    print("EARTHDATA_AUTH_MODE=username_password_bearer_token_exchange", file=sys.stderr)
+    print("EARTHDATA_AUTH_MODE=username_password_asf_session", file=sys.stderr)
     for attempt in range(1, attempts + 1):
         session = asf_search.ASFSession()
-        response = None
+        source_request = session.request
+
+        def bounded_request(method: str, url: str, **kwargs: Any) -> Any:
+            kwargs.setdefault("timeout", (10, 20))
+            return source_request(method, url, **kwargs)
+
+        # auth_with_creds() makes both the documented EDL token request and
+        # ASF's OAuth redirect request.  Bound those upstream calls while
+        # retaining the caller-supplied timeouts used for product probes and
+        # multi-GB streaming downloads.
+        session.request = bounded_request
         try:
-            # auth_with_creds() also requests an asf-urs cookie. That cookie is
-            # required for some ASF products, but not for these NISAR L2 HTTPS
-            # objects. The cookie exchange can return 401 even after EDL issued
-            # a valid user token, so perform the documented token request and
-            # install the resulting Bearer credential directly.
-            response = session.post(
-                f"https://{session.edl_host}/api/users/find_or_create_token",
-                auth=HTTPBasicAuth(username, password),
-                timeout=(10, 20),
-            )
-            response.raise_for_status()
-            payload = response.json()
-            access_token = payload.get("access_token") if isinstance(payload, dict) else None
-            if not isinstance(access_token, str) or not access_token:
-                raise RuntimeError("EARTHDATA_TOKEN_RESPONSE_INVALID")
-            session._update_edl_token(access_token)
-            return session
-        except (requests.exceptions.RequestException, ValueError) as exc:
+            return session.auth_with_creds(username, password)
+        except (requests.exceptions.RequestException, ASFAuthenticationError) as exc:
             if attempt >= attempts or not is_retryable_remote_failure(exc):
                 raise
             _sleep_before_retry("earthdata_authentication", attempt, str(exc))
-        finally:
-            if response is not None:
-                response.close()
     raise RuntimeError("EARTHDATA_AUTHENTICATION_RETRIES_EXHAUSTED")
 
 

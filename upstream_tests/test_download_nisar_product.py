@@ -395,7 +395,7 @@ def test_pre_generated_earthdata_user_token_bypasses_login_token_endpoint(monkey
     assert "EARTHDATA_AUTH_MODE=pre_generated_user_token" in capsys.readouterr().err
 
 
-def test_username_password_exchange_installs_bearer_without_asf_cookie(monkeypatch, capsys):
+def test_username_password_uses_complete_asf_session_with_bounded_requests(monkeypatch, capsys):
     from types import SimpleNamespace
 
     monkeypatch.delenv("EARTHDATA_TOKEN", raising=False)
@@ -403,39 +403,38 @@ def test_username_password_exchange_installs_bearer_without_asf_cookie(monkeypat
     monkeypatch.setenv("EARTHDATA_PASSWORD", "password")
     calls = []
 
-    class TokenResponse:
-        def raise_for_status(self):
-            return None
-
-        def json(self):
-            return {"access_token": "issued-user-token"}
-
-        def close(self):
-            calls.append("closed")
-
     class FakeASFSession:
-        edl_host = "urs.earthdata.nasa.gov"
+        def request(self, method, url, **kwargs):
+            calls.append((method, url, kwargs["timeout"]))
+            return object()
 
-        def post(self, url, **kwargs):
-            calls.append((url, kwargs["timeout"]))
-            return TokenResponse()
-
-        def _update_edl_token(self, token):
-            calls.append(("token", token))
+        def auth_with_creds(self, username, password):
+            calls.append(("credentials", username, password))
+            self.request("POST", "https://urs.earthdata.nasa.gov/api/users/find_or_create_token")
+            self.request(
+                "GET",
+                "https://urs.earthdata.nasa.gov/oauth/authorize",
+                timeout=(15, 25),
+            )
+            calls.append(("cookie", "asf-urs"))
+            return self
 
     monkeypatch.setitem(
         download.sys.modules,
         "asf_search",
-        SimpleNamespace(ASFSession=FakeASFSession),
+        SimpleNamespace(ASFSession=FakeASFSession, ASFAuthenticationError=RuntimeError),
     )
 
     session = download.build_authenticated_session_with_retry(object())
 
     assert isinstance(session, FakeASFSession)
-    assert calls[0] == ("https://urs.earthdata.nasa.gov/api/users/find_or_create_token", (10, 20))
-    assert ("token", "issued-user-token") in calls
-    assert "closed" in calls
-    assert "username_password_bearer_token_exchange" in capsys.readouterr().err
+    assert calls == [
+        ("credentials", "user", "password"),
+        ("POST", "https://urs.earthdata.nasa.gov/api/users/find_or_create_token", (10, 20)),
+        ("GET", "https://urs.earthdata.nasa.gov/oauth/authorize", (15, 25)),
+        ("cookie", "asf-urs"),
+    ]
+    assert "username_password_asf_session" in capsys.readouterr().err
 
 
 def test_user_token_is_sufficient_without_username_password(monkeypatch, tmp_path, capsys):
