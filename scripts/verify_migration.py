@@ -73,13 +73,18 @@ def main():
             if use:
                 require(use.startswith('./.github/workflows/'), f'External workflow dependency: {use}')
                 require((ROOT / use).is_file(), f'Missing reusable workflow: {use}')
-    render = yaml.load((ROOT / 'render.yaml').read_text(), Loader=Loader)
-    for service in render['services']:
-        require((ROOT / service['rootDir']).is_dir(), 'Invalid Render root')
-    api = render['services'][0]
-    env = {x['key']: x.get('value') for x in api['envVars']}
-    for key in ('GITHUB_ACTIONS_REPOSITORY', 'RIVERSHIFT_GITHUB_ACTIONS_REPOSITORY', 'KNOWN_PLACE_REPOSITORY', 'KNOWN_PLACE_PAPER_REPOSITORY'):
-        require(env[key] == manifest['destination'], f'Incorrect destination: {key}')
+    require(not (ROOT / 'render.yaml').exists(), 'The monorepo deployment target is Vercel, not a root Render Blueprint')
+    frontend = json.loads((ROOT / 'apps/dynamic/Frontend/vercel.json').read_text())
+    require(
+        frontend.get('rewrites') == [{'source': '/((?!assets/).*)', 'destination': '/index.html'}],
+        'Invalid Vercel SPA rewrite',
+    )
+    backend = json.loads((ROOT / 'apps/dynamic/Backend/vercel.json').read_text())
+    require(backend.get('$schema') == 'https://openapi.vercel.sh/vercel.json', 'Missing Vercel schema')
+    require(backend.get('functions', {}).get('index.py', {}).get('maxDuration') == 300, 'Invalid API duration')
+    require((ROOT / 'apps/dynamic/Backend/index.py').is_file(), 'Missing Vercel FastAPI entrypoint')
+    require((ROOT / 'apps/dynamic/Backend/.python-version').read_text().strip() == '3.13', 'Invalid Vercel Python version')
+    require((ROOT / 'docs/operations/VERCEL_DEPLOYMENT_BN.md').is_file(), 'Missing Vercel deployment guide')
     published_refs = sum(entry.get('publication') != 'local-only' and entry['original'].startswith('refs/') for entry in manifest['refs'])
     print(f'PASS: {len(manifest["files"])} imported files, {len(changed)} reviewed adaptation(s), {published_refs} source history refs, {len(pins)} scientific pins, {len(register)} workflow contracts')
 

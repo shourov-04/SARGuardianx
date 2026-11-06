@@ -2,7 +2,7 @@
 
 Consolidated frontend, active Firebase/Supabase API, scientific workers, and pinned NISAR source from the three original SARGuardian repositories. Scientific algorithms and measurement/status semantics are preserved.
 
-**Render setup:** [বাংলা deployment guide](docs/operations/RENDER_DEPLOYMENT_BN.md). The root [render.yaml](render.yaml) defines the frontend static site and active API. Credentials are configured separately in Render and GitHub Actions; none are included here.
+**Vercel setup:** [বাংলা deployment guide](docs/operations/VERCEL_DEPLOYMENT_BN.md). Create two Vercel Projects from this monorepo using the existing frontend and API project configurations. Credentials are configured separately in Vercel and GitHub Actions; none are included here.
 
 | Component | Location |
 |---|---|
@@ -15,7 +15,7 @@ Consolidated frontend, active Firebase/Supabase API, scientific workers, and pin
 | Central workflows | [.github/workflows](.github/workflows) |
 | Supabase SQL, in timestamp order | [apps/dynamic/Backend/supabase/migrations](apps/dynamic/Backend/supabase/migrations) |
 
-The original directory layouts inside each source tree are intentional: tests, worker imports, relative paths, and provenance checks continue to work. The two APIs are separate; Render runs **only** the Dynamic API.
+The original directory layouts inside each source tree are intentional: tests, worker imports, relative paths, and provenance checks continue to work. The two APIs are separate; deploy **only** the Dynamic API at `apps/dynamic/Backend` to Vercel.
 
 Original branches, tags, and pull-request source heads from the three code repositories are retained under `archive/<source>/...` Git tags. Worker checkouts use these preserved Git objects at their original SHAs, from this repository. Do not delete archive tags. Development changes in a worker snapshot do not automatically change the pinned worker version: update the pin and its tests deliberately.
 

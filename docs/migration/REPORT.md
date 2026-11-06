@@ -50,7 +50,7 @@ Local checks completed:
 - Known Place two-polygon: 333 tests pass across initial/retry runs.
 - Author-exact selected author/paper/footprint regression: 142 tests PASS. Its broader historical generic-AOI suite has a pre-existing string-format assertion mismatch (six versus nine WKT decimal places); the current two-polygon snapshot passes that integration test. The historical source and test are preserved unchanged. The author-exact CI job targets its author/paper/footprint behavior, and the separate current Known Place job covers the generic AOI engine.
 - Gitleaks 8.30.1 full locally reachable source history and independently cloned published history: zero unreviewed findings. The 27 historical matches and seven new-path copies are documented synthetic test identifiers/dummy Maps keys; additional copies match previously reviewed five-line test contexts exactly. No real credential was copied into a new configuration.
-- Root Render Blueprint: PASS against Render's official `https://render.com/schema/render.yaml.json` JSON schema (SHA-256 `8a3fb8da6b4f55fe686fbefa790e011d3dd7895f013f355953c572a21ab6494a`). This is structural validation, not an authenticated Render deploy.
+- Vercel configuration: the preserved frontend SPA rewrite and backend FastAPI function definitions validate against Vercel's official `vercel.json` schema. Python `3.13` is selected explicitly for the API project.
 
 ## Publication and outstanding CI
 
@@ -64,6 +64,6 @@ Local test evidence does not imply hosted integration or operational pilot succe
 
 ## Deployment boundary
 
-The root Render Blueprint and [Bengali guide](../operations/RENDER_DEPLOYMENT_BN.md) configure two new services. No service was created, existing deployment changed, domain moved, database altered, secret transferred, or live satellite job dispatched.
+The existing per-application Vercel configs and [Bengali guide](../operations/VERCEL_DEPLOYMENT_BN.md) define two Projects from the monorepo: Vite frontend and active FastAPI API. The earlier migration-only root Render Blueprint has been removed. Historical source snapshots may still contain Render references/configs; they are preserved provenance and are not deployment instructions for this monorepo.
 
-Before operating the site, configure the two Render environments and new Actions secrets, reconcile/apply the seven Supabase migrations, authorize frontend domains in Firebase/Maps, and verify live login/persistence/callback/Drive behavior with a consented small pilot. Existing deployments remain available for rollback. A green unit-test suite is not real-data output parity or independent scientific validation.
+Before operating the site, configure both Vercel Projects and new Actions secrets, reconcile/apply the seven Supabase migrations, authorize frontend domains in Firebase/Maps, and verify live login/persistence/callback/Drive behavior with a consented small pilot. Existing deployments remain available for rollback. A green unit-test suite is not real-data output parity or independent scientific validation.
