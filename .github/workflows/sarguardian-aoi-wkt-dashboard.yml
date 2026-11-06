@@ -181,7 +181,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: ${{ github.repository }}
-        ref: 924021ad0b0563c17b04c1832edf99bfde184b46
+        ref: 843066de482d79ab41a51ea01b51dcb44a600ea6
     - name: Record exact orchestration revision for every downstream product
       id: orch
       shell: bash
