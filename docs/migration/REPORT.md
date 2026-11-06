@@ -1,6 +1,6 @@
 # Migration report — 2026-11-06
 
-Destination: `shourov-04/SARGuardian`. Working branch: `migration/consolidate-render`.
+Destination: `shourov-04/SARGuardian`. Publication branch: `main`; migration branch retained for audit history.
 
 ## Source preservation
 
@@ -20,7 +20,7 @@ The import manifest covers **1,102 files**, including the three main snapshots, 
 
 ## Runtime adaptation
 
-Only `apps/dynamic/Backend/app/known_place.py` differs from its source snapshot: environment variables now configure the generic and author-exact repository/ref. Source defaults remain compatible. The Render configuration explicitly points both workflows to `shourov-04/SARGuardian`.
+Only `apps/dynamic/Backend/app/known_place.py` differs from its source snapshot: environment variables now configure the generic and author-exact repository/ref. Source defaults remain compatible. The deployment environment documented for Vercel points both workflows to `shourov-04/SARGuardian` on `main`.
 
 See [exact patch](runtime-adaptation.patch) and [before/after hashes](adaptations.json). No scientific method, product identity, output interpretation, API authentication, callback signing, retention logic or database schema was changed.
 
@@ -54,11 +54,11 @@ Local checks completed:
 
 ## Publication and outstanding CI
 
-Code and all 616 archive tags are published to `shourov-04/SARGuardian`. [Draft PR #1](https://github.com/shourov-04/SARGuardian/pull/1) contains the migration; `main` contains only the initialization README until review and merge.
+Code and all 616 archive tags are published to `shourov-04/SARGuardian`. The complete monorepo, including the frontend and backend, is published on `main`; [migration PR #1](https://github.com/shourov-04/SARGuardian/pull/1) remains as review/audit history.
 
-Both destination Linux validations passed at migration commit `9e6d0a19591cb572d76763131a30a36272eaed33`: [PR run 42105776448](https://github.com/shourov-04/SARGuardian/actions/runs/42105776448) and [push run 42105750259](https://github.com/shourov-04/SARGuardian/actions/runs/42105750259). This closes the local Windows/POSIX test gap recorded above for the current migration commit.
+Both destination Linux validations passed at the Vercel-ready migration commit `f48b0c090ce42a711a40c1f765ef6b5bd5624fb0`: [PR run 42229716927](https://github.com/shourov-04/SARGuardian/actions/runs/42229716927) and [push run 42229707714](https://github.com/shourov-04/SARGuardian/actions/runs/42229707714). This closes the local Windows/POSIX test gap recorded above for the transferred application code.
 
-Complete the migration review before merging to `main`. No force-push or existing source change was made.
+The migration was promoted to `main` by fast-forward, without a force-push or changes to any source repository.
 
 Local test evidence does not imply hosted integration or operational pilot success.
 

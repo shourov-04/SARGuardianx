@@ -9,7 +9,7 @@
 
 Scientific processing Vercel Function-এর মধ্যে চলে না। API GitHub Actions workflow dispatch করে; worker private Drive result তৈরি করে API-তে signed callback পাঠায়। এই কারণে Vercel environment variables এবং GitHub Actions secrets দুটোই লাগবে।
 
-বর্তমান handoff: code [migration PR #1](https://github.com/shourov-04/SARGuardian/pull/1)-এ আছে এবং Linux CI pass করেছে। Review শেষে PR `main`-এ merge করুন। Vercel-এর Production Branch হিসেবে `main` ব্যবহার করুন।
+বর্তমান handoff: সম্পূর্ণ frontend ও backend code `shourov-04/SARGuardian`-এর `main` branch-এ প্রকাশিত এবং Linux CI pass করেছে। Vercel-এর Production Branch হিসেবে `main` ব্যবহার করুন। [Migration PR #1](https://github.com/shourov-04/SARGuardian/pull/1) review/audit history হিসেবে রাখা হয়েছে।
 
 ## ১. Backend API Project
 
@@ -111,7 +111,7 @@ Firebase Authentication-এ Google provider enable করে final frontend host
 
 ## ৫. Recommended deployment order
 
-1. PR review করে `main`-এ merge করুন।
+1. `shourov-04/SARGuardian` repository-এর published `main` branch থেকে দুটি Vercel Project import/connect করুন।
 2. Backend Project তৈরি করে variables দিন; processing switches `false` রাখুন এবং deploy করুন।
 3. Backend production URL নিয়ে Frontend Project-এর `VITE_SARGUARDIAN_API_URL` দিন ও deploy করুন।
 4. Actual frontend production origin Backend-এর `CORS_ORIGINS`-এ বসিয়ে backend redeploy করুন।
