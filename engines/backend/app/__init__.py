@@ -1,1 +1,0 @@
-"""SARGuardian backend application package."""

@@ -1,1 +1,0 @@
-"""Science execution boundary for SARGuardian jobs."""

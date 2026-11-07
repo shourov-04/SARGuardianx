@@ -1,1 +1,0 @@
-# SARGuardian_Dynamic
