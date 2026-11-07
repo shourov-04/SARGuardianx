@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+MAX_RECOVERY_PRODUCTS = 200
+
 def read_json(path: Path) -> dict[str, Any] | None:
     try:
         value=json.loads(path.read_text(encoding="utf-8"))
@@ -16,7 +18,14 @@ def read_json(path: Path) -> dict[str, Any] | None:
     except (OSError,ValueError,UnicodeDecodeError):
         return None
 
-def plan(manifest: dict[str, Any], product_root: Path, cleanup_root: Path) -> dict[str, Any]:
+def plan(
+    manifest: dict[str, Any],
+    product_root: Path,
+    cleanup_root: Path,
+    *,
+    include_terminal_recovery: bool = False,
+    final_audit: bool = False,
+) -> dict[str, Any]:
     retry=[]; decisions=[]
     for product in manifest.get("products",[]):
         pid=str(product.get("id",""))
@@ -86,18 +95,28 @@ def plan(manifest: dict[str, Any], product_root: Path, cleanup_root: Path) -> di
         complete=not reasons and terminal_reason is None
         if complete:
             status="PASS"
-        elif terminal_reason:
+        elif final_audit:
+            status="TERMINAL_FAILURE"
+            terminal_reason = terminal_reason or "FINAL_RECOVERY_ATTEMPT_EXHAUSTED"
+            reasons.append(terminal_reason)
+        elif terminal_reason and not include_terminal_recovery:
             status="TERMINAL_FAILURE"
             reasons.append(terminal_reason)
         else:
             status="RETRY"
+            if terminal_reason:
+                reasons.append(terminal_reason)
         decisions.append({"product_id":pid,"granule_name":granule,"status":status,
-                          "terminal_reason":terminal_reason if status=="TERMINAL_FAILURE" else None,
+                          "terminal_reason":terminal_reason,
                           "reasons":[] if complete else sorted(set(reasons))})
         if status=="RETRY":
             retry.append({k:product[k] for k in ("id","granule_name","product_type","maturity","expected_source_bytes")})
+    recovery_slots = [dict(row, present=True) for row in retry]
+    if len(recovery_slots) > MAX_RECOVERY_PRODUCTS:
+        raise ValueError("RECOVERY_PRODUCT_LIMIT_EXCEEDED")
+    recovery_slots.extend({"present": False} for _ in range(MAX_RECOVERY_PRODUCTS - len(recovery_slots)))
     return {
-        "schema_version":"sarguardian-aoi-retry-plan/1.0",
+        "schema_version":"sarguardian-aoi-retry-plan/1.1",
         "manifest_run_id":manifest.get("run_id"),
         "aoi_wkt_sha256":manifest.get("aoi_wkt_sha256"),
         "products_expected":len(manifest.get("products",[])),
@@ -105,6 +124,7 @@ def plan(manifest: dict[str, Any], product_root: Path, cleanup_root: Path) -> di
         "retry_count":len(retry),
         "terminal_failure_count":sum(1 for row in decisions if row["status"]=="TERMINAL_FAILURE"),
         "retry_matrix":retry,
+        "recovery_slots":recovery_slots,
         "decisions":decisions,
     }
 
@@ -114,16 +134,33 @@ def main() -> int:
     p.add_argument("--product-root",required=True,type=Path)
     p.add_argument("--cleanup-root",required=True,type=Path)
     p.add_argument("--out",required=True,type=Path)
+    p.add_argument(
+        "--include-terminal-recovery",
+        action="store_true",
+        help="Send every incomplete product to the one final recovery runner.",
+    )
+    p.add_argument(
+        "--final-audit",
+        action="store_true",
+        help="Classify every remaining incomplete product as exhausted.",
+    )
     a=p.parse_args()
     manifest=read_json(a.manifest)
     if manifest is None:
         print("ERROR=AOI_RUN_MANIFEST_INVALID")
         return 2
-    result=plan(manifest,a.product_root,a.cleanup_root)
+    result=plan(
+        manifest,
+        a.product_root,
+        a.cleanup_root,
+        include_terminal_recovery=a.include_terminal_recovery,
+        final_audit=a.final_audit,
+    )
     a.out.parent.mkdir(parents=True,exist_ok=True)
     a.out.write_text(json.dumps(result,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     with open(os.environ["GITHUB_OUTPUT"],"a",encoding="utf-8") as out:
         out.write("retry_matrix="+json.dumps(result["retry_matrix"],separators=(",",":"))+"\n")
+        out.write("recovery_slots="+json.dumps(result["recovery_slots"],separators=(",",":"))+"\n")
         out.write("retry_count="+str(result["retry_count"])+"\n")
         out.write("terminal_failure_count="+str(result["terminal_failure_count"])+"\n")
     print("AOI_RETRY_PRODUCTS={}/{}".format(result["retry_count"],result["products_expected"]))

@@ -100,3 +100,46 @@ def test_structural_validation_failure_after_successful_reader_is_terminal(tmp_p
     assert result["decisions"][0]["terminal_reason"] == (
         "NON_RETRYABLE_STRUCTURAL_VALIDATION_FAILURE_AFTER_SUCCESSFUL_READER"
     )
+
+
+def test_primary_audit_sends_even_deterministic_failure_to_final_recovery(tmp_path):
+    manifest, product_root, cleanup_root = _inputs(
+        tmp_path,
+        {"download": "success", "aoi_preflight": "success", "reader": "failure"},
+    )
+
+    result = planner.plan(
+        manifest,
+        product_root,
+        cleanup_root,
+        include_terminal_recovery=True,
+    )
+
+    assert result["retry_count"] == 1
+    assert result["terminal_failure_count"] == 0
+    assert result["decisions"][0]["status"] == "RETRY"
+    assert result["decisions"][0]["terminal_reason"] == (
+        "NON_RETRYABLE_READER_FAILURE_AFTER_SUCCESSFUL_DOWNLOAD_AND_AOI_PREFLIGHT"
+    )
+    assert result["recovery_slots"][0]["present"] is True
+    assert len(result["recovery_slots"]) == planner.MAX_RECOVERY_PRODUCTS
+    assert all(not row["present"] for row in result["recovery_slots"][1:])
+
+
+def test_final_audit_exhausts_generic_failure_without_scheduling_fourth_attempt(tmp_path):
+    manifest, product_root, cleanup_root = _inputs(
+        tmp_path,
+        {"download": "failure", "aoi_preflight": "skipped", "reader": "skipped"},
+    )
+
+    result = planner.plan(
+        manifest,
+        product_root,
+        cleanup_root,
+        final_audit=True,
+    )
+
+    assert result["retry_count"] == 0
+    assert result["terminal_failure_count"] == 1
+    assert result["decisions"][0]["status"] == "TERMINAL_FAILURE"
+    assert result["decisions"][0]["terminal_reason"] == "FINAL_RECOVERY_ATTEMPT_EXHAUSTED"

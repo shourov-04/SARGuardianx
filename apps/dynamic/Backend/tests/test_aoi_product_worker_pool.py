@@ -14,6 +14,9 @@ from write_no_valid_pixel_stats import write_no_valid_pixel_stats  # noqa: E402
 
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "sarguardian-aoi-wkt-dashboard.yml"
 WORKER_PATH = ROOT / ".github" / "workflows" / "sarguardian-aoi-product-worker.yml"
+BATCH_WORKER_PATH = ROOT / ".github" / "workflows" / "sarguardian-aoi-batch-worker.yml"
+RECOVERY_WORKER_PATH = ROOT / ".github" / "workflows" / "sarguardian-aoi-recovery-worker.yml"
+PRODUCT_ACTION_PATH = ROOT / ".github" / "actions" / "process-aoi-product" / "action.yml"
 BUILDER_SHA = "ecd125f68ed61c276406f73a1d77eb27979e204e"
 SCIENCE_ENGINE_SHA = "f038e4dfdb53c8d9793aaaefe173570a1032026c"
 
@@ -27,23 +30,54 @@ def _job_block(workflow: str, job_id: str) -> str:
     return match.group(1)
 
 
-def test_initial_product_pool_is_bounded_and_automatic_redownload_is_disabled() -> None:
+def test_balanced_primary_pool_and_single_recovery_runner_contract() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
-    block = _job_block(workflow, "process-products")
-    assert re.search(r"(?m)^\s{6}max-parallel:\s*15\s*$", block), "process-products"
-    assert "uses: ./.github/workflows/sarguardian-aoi-product-worker.yml" in block
+    block = _job_block(workflow, "process-batches")
+    assert re.search(r"(?m)^\s{6}max-parallel:\s*10\s*$", block), "process-batches"
+    assert "uses: ./.github/workflows/sarguardian-aoi-batch-worker.yml" in block
+    assert "include: ${{ fromJSON(needs.manifest.outputs.batch_matrix) }}" in block
     assert "  retry-plan:\n" in workflow
     assert "sarguardian-aoi-retry-plan" in workflow
-    assert "  retry-products:\n" not in workflow
-    assert "needs: [manifest, process-products, retry-plan]" in workflow
-    assert "needs: [manifest, process-products, retry-plan]" in workflow
+    assert "  recover-products:\n" in workflow
+    assert workflow.count("uses: ./.github/workflows/sarguardian-aoi-recovery-worker.yml") == 1
+    assert "  final-plan:\n" in workflow
+    assert "--include-terminal-recovery" in workflow
+    assert "--final-audit" in workflow
+
+
+def test_each_primary_product_has_two_attempts_on_the_same_runner() -> None:
+    worker = BATCH_WORKER_PATH.read_text(encoding="utf-8")
+    assert worker.count("execution_label: initial") == 20
+    assert worker.count("execution_label: primary-retry") == 20
+    assert worker.count("uses: ./.github/actions/process-aoi-product") == 40
+    for index in range(1, 21):
+        attempt = f"slot_{index:02d}_attempt_1"
+        assert f"id: {attempt}" in worker
+        assert f"if: ${{{{ steps.{attempt}.outcome == 'failure' }}}}" in worker
+
+
+def test_final_recovery_is_one_job_with_one_attempt_per_failed_product() -> None:
+    worker = RECOVERY_WORKER_PATH.read_text(encoding="utf-8")
+    assert "strategy:" not in worker
+    assert worker.count("execution_label: recovery-final") == 200
+    assert worker.count("uses: ./.github/actions/process-aoi-product") == 200
+    assert "primary-retry" not in worker
+
+
+def test_composite_action_preserves_science_retention_and_cleanup_pipeline() -> None:
+    action = PRODUCT_ACTION_PATH.read_text(encoding="utf-8")
+    assert "Download exactly one raw NISAR granule" in action
+    assert "Validate derived outputs against the AOI-specific structural checks before cleanup" in action
+    assert "Upload validated per-product outputs to Drive with checksum verification" in action
+    assert "Delete local raw/archive only after successful remote retention" in action
+    assert "timeout-minutes:" not in action
 
 
 def test_drive_folders_are_prepared_before_the_parallel_matrix_starts() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
     preflight = workflow.index("Prepare shared Drive folder hierarchy before parallel product workers")
     publish_manifest = workflow.index("Publish the selected-product manifest")
-    worker_matrix = workflow.index("  process-products:")
+    worker_matrix = workflow.index("  process-batches:")
     assert preflight < publish_manifest < worker_matrix
     assert "python tools/prepare_aoi_drive_folders.py" in workflow
     assert "DRIVE_VERSION_TAG: ${{ github.run_id }}-${{ github.run_attempt }}" in workflow

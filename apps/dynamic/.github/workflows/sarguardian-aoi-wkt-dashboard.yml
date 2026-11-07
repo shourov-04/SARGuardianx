@@ -166,6 +166,9 @@ jobs:
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
       product_count: ${{ steps.discover.outputs.product_count }}
+      batch_matrix: ${{ steps.batches.outputs.batch_matrix }}
+      batch_count: ${{ steps.batches.outputs.batch_count }}
+      max_batch_size: ${{ steps.batches.outputs.max_batch_size }}
       aoi_wkt_sha256: ${{ steps.discover.outputs.aoi_wkt_sha256 }}
       orchestration_sha: ${{ steps.orch.outputs.sha }}
       progress_reported: ${{ steps.progress.outputs.reported }}
@@ -242,6 +245,15 @@ jobs:
             --run-profile "$RUN_PROFILE" --retention-profile "$RETENTION_PROFILE" \
             --out "$RUNNER_TEMP/sarguardian-aoi/manifest/manifest.json"
 
+      - name: Balance products across at most ten primary runners
+        id: batches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/plan_aoi_batches.py \
+            --manifest "$RUNNER_TEMP/sarguardian-aoi/manifest/manifest.json" \
+            --out "$RUNNER_TEMP/sarguardian-aoi/manifest/primary-batch-plan.json"
+
       - name: Report durable discovered-product counts
         id: progress
         if: inputs.job_id != ''
@@ -277,44 +289,41 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sarguardian-aoi-run-manifest
-          path: ${{ runner.temp }}/sarguardian-aoi/manifest/manifest.json
+          path: |
+            ${{ runner.temp }}/sarguardian-aoi/manifest/manifest.json
+            ${{ runner.temp }}/sarguardian-aoi/manifest/primary-batch-plan.json
           if-no-files-found: error
           retention-days: 14
 
-  process-products:
-    name: Process AOI product — ${{ matrix.id }}
+  process-batches:
+    name: Primary runner ${{ matrix.batch_id }} (${{ matrix.product_count }} products)
     needs: manifest
     if: needs.manifest.result == 'success'
     strategy:
       fail-fast: false
-      # Each matrix item owns an isolated runner and one raw HDF5 product.
-      # Refill free slots immediately; do not stage 15 multi-GB files on one disk.
-      max-parallel: 15
+      max-parallel: 10
       matrix:
-        include: ${{ fromJSON(needs.manifest.outputs.matrix) }}
-    uses: ./.github/workflows/sarguardian-aoi-product-worker.yml
+        include: ${{ fromJSON(needs.manifest.outputs.batch_matrix) }}
+    uses: ./.github/workflows/sarguardian-aoi-batch-worker.yml
     with:
+      batch_json: ${{ toJSON(matrix.products) }}
+      product_count: ${{ matrix.product_count }}
       aoi_wkt: ${{ inputs.aoi_wkt }}
       orchestration_sha: ${{ needs.manifest.outputs.orchestration_sha }}
-      product_id: ${{ matrix.id }}
-      granule_name: ${{ matrix.granule_name }}
-      product_type: ${{ matrix.product_type }}
-      maturity: ${{ matrix.maturity }}
-      expected_source_bytes: ${{ matrix.expected_source_bytes }}
       retention_profile: ${{ inputs.retention_profile }}
       target_latitude: ${{ inputs.target_latitude }}
       target_longitude: ${{ inputs.target_longitude }}
-      execution_label: initial
       job_id: ${{ inputs.job_id }}
     secrets: inherit
 
   retry-plan:
-    name: Audit product and post-cleanup receipts (no automatic re-download)
-    needs: [manifest, process-products]
+    name: Audit two-attempt primary results and plan final recovery
+    needs: [manifest, process-batches]
     if: always() && needs.manifest.result == 'success'
     runs-on: ubuntu-24.04
     outputs:
       retry_matrix: ${{ steps.plan.outputs.retry_matrix }}
+      recovery_slots: ${{ steps.plan.outputs.recovery_slots }}
       retry_count: ${{ steps.plan.outputs.retry_count }}
       terminal_failure_count: ${{ steps.plan.outputs.terminal_failure_count }}
     steps:
@@ -343,7 +352,7 @@ jobs:
           pattern: sarguardian-cleanup-*
           path: ${{ runner.temp }}/sarguardian-aoi/retry/cleanups
 
-      - name: Record missing or invalid product checkpoints (diagnostic only)
+      - name: Send every product still incomplete after two attempts to recovery
         id: plan
         shell: bash
         run: |
@@ -352,7 +361,7 @@ jobs:
           python tools/plan_aoi_retries.py \
             --manifest "$root/manifest/manifest.json" \
             --product-root "$root/products" --cleanup-root "$root/cleanups" \
-            --out "$root/retry-plan.json"
+            --out "$root/retry-plan.json" --include-terminal-recovery
 
       - name: Preserve retry decision evidence
         if: always()
@@ -363,20 +372,91 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Record the single-download policy
+      - name: Record the bounded retry policy
         if: always()
         shell: bash
         run: |
           {
             echo "## Raw download retry policy"
-            echo "- Each product worker attempts one raw-granule download."
-            echo "- Incomplete checkpoints are retained as diagnostic evidence; no second product worker is launched automatically."
+            echo "- A product gets attempt 1 and attempt 2 sequentially on its assigned primary runner."
+            echo "- Products still incomplete after both primary attempts move to one final recovery runner."
+            echo "- The recovery runner performs exactly one final attempt per incomplete product."
             echo "- Drive upload receipts and verified-cleanup gates remain mandatory."
           } >> "$GITHUB_STEP_SUMMARY"
 
+  recover-products:
+    name: Final recovery runner (${{ needs.retry-plan.outputs.retry_count }} products)
+    needs: [manifest, retry-plan]
+    if: always() && needs.manifest.result == 'success' && needs.retry-plan.outputs.retry_count != '0'
+    uses: ./.github/workflows/sarguardian-aoi-recovery-worker.yml
+    with:
+      recovery_json: ${{ needs.retry-plan.outputs.recovery_slots }}
+      retry_count: ${{ fromJSON(needs.retry-plan.outputs.retry_count) }}
+      aoi_wkt: ${{ inputs.aoi_wkt }}
+      orchestration_sha: ${{ needs.manifest.outputs.orchestration_sha }}
+      retention_profile: ${{ inputs.retention_profile }}
+      target_latitude: ${{ inputs.target_latitude }}
+      target_longitude: ${{ inputs.target_longitude }}
+      job_id: ${{ inputs.job_id }}
+    secrets: inherit
+
+  final-plan:
+    name: Audit final recovery results
+    needs: [manifest, retry-plan, recover-products]
+    if: always() && needs.manifest.result == 'success'
+    runs-on: ubuntu-24.04
+    outputs:
+      retry_count: ${{ steps.plan.outputs.retry_count }}
+      terminal_failure_count: ${{ steps.plan.outputs.terminal_failure_count }}
+    steps:
+      - name: Checkout receipt-check tools at the manifest's exact code revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.manifest.outputs.orchestration_sha }}
+
+      - name: Download AOI run manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: sarguardian-aoi-run-manifest
+          path: ${{ runner.temp }}/sarguardian-aoi/final/manifest
+
+      - name: Download final product checkpoints
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sarguardian-granule-*
+          path: ${{ runner.temp }}/sarguardian-aoi/final/products
+
+      - name: Download final cleanup receipts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sarguardian-cleanup-*
+          path: ${{ runner.temp }}/sarguardian-aoi/final/cleanups
+
+      - name: Classify final product state without another retry
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/sarguardian-aoi/final"
+          python tools/plan_aoi_retries.py \
+            --manifest "$root/manifest/manifest.json" \
+            --product-root "$root/products" --cleanup-root "$root/cleanups" \
+            --out "$root/final-plan.json" --final-audit
+
+      - name: Preserve final recovery decision evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sarguardian-aoi-final-plan
+          path: ${{ runner.temp }}/sarguardian-aoi/final/final-plan.json
+          if-no-files-found: warn
+          retention-days: 14
+
   dashboard:
     name: Assemble results dashboard and downloadable maps
-    needs: [manifest, process-products, retry-plan]
+    needs: [manifest, process-batches, retry-plan, recover-products, final-plan]
     if: always() && needs.manifest.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -491,7 +571,7 @@ jobs:
           print("")
           print("- **Dashboard status:** "+str(x.get("status")))
           print("- **Products structurally validated:** {}/{}".format(x.get("products_validated"),x.get("products_expected")))
-          print("- **Product-worker concurrency cap:** 15 isolated per-product runners; each downloads, processes, verifies remote retention, and cleans up its own product.")
+          print("- **Runner policy:** up to 10 balanced primary runners; each product gets two attempts on its assigned runner, then one shared final recovery runner handles products still incomplete.")
           print("- **GUNW / GOFF:** {} / {}".format(x.get("gunw_count"),x.get("goff_count")))
           print("- **Products with valid pixels:** "+str(x.get("products_with_science_pixels")))
           print("- **AOI WKT SHA-256:** `"+str(x.get("aoi_wkt_sha256"))+"`")
