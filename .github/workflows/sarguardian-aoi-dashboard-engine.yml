@@ -396,7 +396,7 @@ jobs:
       - name: Checkout AOI aggregator and interactive dashboard at the dispatched revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: moshiour0/SARGuardian-Monorepo
+          repository: ${{ github.repository }}
           ref: ${{ needs.manifest.outputs.orchestration_sha }}
           path: dashboard-source
 
