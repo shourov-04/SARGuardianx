@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools"))
+ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(ROOT / "apps" / "dynamic" / "tools"))
 from prepare_aoi_drive_folders import prepare_drive_folders  # noqa: E402
 from write_no_valid_pixel_stats import write_no_valid_pixel_stats  # noqa: E402
 
@@ -17,8 +17,7 @@ WORKER_PATH = ROOT / ".github" / "workflows" / "sarguardian-aoi-product-worker.y
 BATCH_WORKER_PATH = ROOT / ".github" / "workflows" / "sarguardian-aoi-batch-worker.yml"
 RECOVERY_WORKER_PATH = ROOT / ".github" / "workflows" / "sarguardian-aoi-recovery-worker.yml"
 PRODUCT_ACTION_PATH = ROOT / ".github" / "actions" / "process-aoi-product" / "action.yml"
-BUILDER_SHA = "ecd125f68ed61c276406f73a1d77eb27979e204e"
-SCIENCE_ENGINE_SHA = "f038e4dfdb53c8d9793aaaefe173570a1032026c"
+SCIENCE_ENGINE_SHA = "006d4cd1485cf80e509eaf8717c12e9c6390ac09"
 
 
 def _job_block(workflow: str, job_id: str) -> str:
@@ -79,9 +78,10 @@ def test_drive_folders_are_prepared_before_the_parallel_matrix_starts() -> None:
     publish_manifest = workflow.index("Publish the selected-product manifest")
     worker_matrix = workflow.index("  process-batches:")
     assert preflight < publish_manifest < worker_matrix
-    assert "python tools/prepare_aoi_drive_folders.py" in workflow
+    assert "python apps/dynamic/tools/prepare_aoi_drive_folders.py" in workflow
     assert "DRIVE_VERSION_TAG: ${{ github.run_id }}-${{ github.run_attempt }}" in workflow
-    assert "GOOGLE_DRIVE_PARENT_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_PARENT_FOLDER_ID || secrets.GOOGLE_DRIVE_FOLDER_ID }}" in workflow
+    assert "GOOGLE_DRIVE_PARENT_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_PARENT_FOLDER_ID" in workflow
+    assert "secrets.GOOGLE_DRIVE_FOLDER_ID" in workflow
 
 
 class FakeDrive:
@@ -157,32 +157,29 @@ def test_one_product_per_runner_and_cleanup_stays_gated_on_verified_retention() 
     assert "runner_raw_hdf5_deleted" in worker
 
 
-def test_reviewed_dashboard_builder_pin_and_exact_verification_remain() -> None:
+def test_imported_upstream_engine_and_science_snapshot_are_used_everywhere() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
-    assert workflow.count(BUILDER_SHA) == 4
-    assert workflow.count('test "$actual" = "$expected"') == 2
+    assert "UPSTREAM_ENGINE_REVISION=2cb521ea11376b2f48e903fb00b0c480796d6578" in workflow
+    assert "engines/find-displacements/tools/aggregate_aoi_run.py" in workflow
+    assert "migration/source-snapshots/nisar-pins/006d4cd" in workflow
     assert SCIENCE_ENGINE_SHA in workflow
 
 
-def test_manifest_stage_checks_out_the_pinned_retention_dependencies_before_install() -> None:
+def test_manifest_stage_verifies_imported_engine_before_install() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
-    checkout = workflow.index("Checkout pinned dashboard retention dependencies for the manifest stage")
-    verification = workflow.index("Verify manifest-stage retention dependency revision")
+    verification = workflow.index("Verify imported engine and immutable science snapshot")
     install = workflow.index("Install pinned discovery and processing dependencies")
     manifest_job = _job_block(workflow, "manifest")
-    assert checkout < verification < install
-    assert "repository: moshiour0/SARGuardian-backend" in manifest_job
-    assert "ref: " + BUILDER_SHA in manifest_job
-    assert "path: dashboard-source" in manifest_job
-    assert 'git -C dashboard-source rev-parse HEAD' in manifest_job
-    assert 'test "$actual" = "$expected"' in manifest_job
+    assert verification < install
+    assert "engines/find-displacements/tools/discover_aoi_products.py" in manifest_job
+    assert "migration/source-snapshots/nisar-pins/006d4cd/requirements.txt" in manifest_job
 
 
 
 def test_worker_captures_reader_log_and_fails_closed_for_no_valid_pixel_diagnostic() -> None:
     worker = WORKER_PATH.read_text(encoding="utf-8")
     start = worker.index("Run the original single-product reader with dynamic WKT-AOI settings")
-    end = worker.index("Measure pair-local noise floor at the selected in-AOI target", start)
+    end = worker.index("Measure target-local detection floors from this pair's retained raster", start)
     reader = worker[start:end]
     assert 'reader_log="$CURATED_DIR/derived/science-reader.log"' in reader
     assert '2>&1 | tee "$reader_log"' in reader

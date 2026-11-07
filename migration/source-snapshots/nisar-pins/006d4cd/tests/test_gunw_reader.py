@@ -1,0 +1,465 @@
+"""
+Regression tests for the GUNW reader.
+
+Each test names the fault it exists to catch and asserts against a
+displacement chosen before the file was written, never against a previous run
+of this code. Comparing new output to old output is how a wrong answer
+survives four rounds of "I re-ran it and it looks the same".
+"""
+
+from __future__ import annotations
+
+import h5py
+import numpy as np
+import pytest
+
+import synth
+from gunw_reader import (SOURCE_RING, aoi_grid, build_aoi_mask, check_consistency,
+                         decode_gunw_mask, read_gunw, verify_products)
+
+TOL_MM = 1.5
+
+
+def _median_in_aoi(result) -> float:
+    v = result["valid"]
+    assert v.any(), "no valid pixels survived gating"
+    return float(np.median(result["displacement_mm"][v]))
+
+
+# ---------------------------------------------------------------------------
+# The test that would have caught six of the seven silent faults
+# ---------------------------------------------------------------------------
+def test_known_displacement_round_trips(tmp_path):
+    """50 mm in, 50 mm out. Sign, wavelength, scaling and gating, in one line."""
+    f = tmp_path / synth.granule_name()
+    truth = synth.write_gunw(f, truth_mm=50.0)
+    result = read_gunw(f, auto_ref=True)
+    got = _median_in_aoi(result)
+    assert got == pytest.approx(truth["truth_mm"], abs=TOL_MM)
+    rejected = sum(int(n) for n in result["gate_rejections"].values())
+    assert result["source_cells_total"] - int(result["valid"].sum()) == rejected
+    assert result["gates"]["finite_phase"] <= result["source_cells_total"]
+
+
+def test_aoi_scoped_gate_ledger_reconciles_with_final_pixels(tmp_path):
+    """Every dropped in-AOI pixel is assigned to one sequential quality gate."""
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0)
+    result = read_gunw(f, auto_ref=True)
+
+    assert result["aoi_gate_ledger_status"] == "PASS_AOI_GATE_RECONCILIATION"
+    assert result["aoi_px"] is not None and result["aoi_px"] > 0
+    cumulative = result["aoi_gate_cumulative_counts"]
+    rejected = result["aoi_gate_rejections"]
+    final = int(result["valid"].sum())
+
+    assert cumulative["final_valid_pixels"] == final
+    assert sum(rejected.values()) == result["aoi_px"] - final
+    assert result["aoi_px"] - sum(rejected.values()) == final
+
+    # A cumulative survivor count may only decrease as sequential gates apply.
+    values = [int(v) for k, v in cumulative.items() if k != "final_valid_pixels"]
+    assert all(left >= right for left, right in zip(values, values[1:])), values
+
+
+@pytest.mark.parametrize("truth_mm", [-120.0, -7.5, 0.0, 7.5, 120.0])
+def test_round_trip_holds_across_sign_and_magnitude(tmp_path, truth_mm):
+    """A sign error passes a single positive case; it does not pass this one."""
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=truth_mm)
+    assert _median_in_aoi(read_gunw(f, auto_ref=True)) == pytest.approx(
+        truth_mm, abs=TOL_MM)
+
+
+def test_wavelength_is_read_from_the_file(tmp_path):
+    """
+    A hardcoded L-band constant is right for NISAR and silently wrong for
+    anything else. Writing a different centre frequency must change the answer
+    by exactly the wavelength ratio - or, correctly, not change it at all.
+    """
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0, wavelength_m=0.0555)      # C-band
+    r = read_gunw(f, auto_ref=True)
+    assert r["wavelength_m"] == pytest.approx(0.0555, abs=1e-4)
+    assert _median_in_aoi(r) == pytest.approx(50.0, abs=TOL_MM)
+
+
+# ---------------------------------------------------------------------------
+# The faults themselves
+# ---------------------------------------------------------------------------
+def test_reference_never_crosses_a_connected_component(tmp_path):
+    """
+    Ground far from the AOI sits in component 2 and is offset by two whole
+    fringes. Referencing there injects 244 mm.
+
+    This is the fault that produced summer medians of +2.34, +2.03, -2.44,
+    +3.88 and -2.29 fringes, and it is invisible in the output: the numbers
+    look like large displacements rather than like an error.
+    """
+    f = tmp_path / synth.granule_name()
+    t = synth.write_gunw(f, truth_mm=50.0, aoi_component=1,
+                         far_component=2, far_fringes=2.0)
+    got = _median_in_aoi(read_gunw(f, auto_ref=True))
+    assert got == pytest.approx(50.0, abs=TOL_MM)
+    for k in (1, 2, -1, -2):
+        assert abs(got - (50.0 + k * t["fringe_mm"])) > 10.0, (
+            f"answer is one fringe multiple off: {got:.1f} mm")
+
+
+def test_coherence_comes_from_the_unwrapped_grid(tmp_path):
+    """
+    The fixture carries a wrappedInterferogram coherence array four times
+    finer, at a shorter path. A search ranking by path length matches it, and
+    every quality gate is then applied to the wrong pixels.
+    """
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0, coherence=0.9, include_wrapped_decoy=True)
+    r = read_gunw(f, auto_ref=True)
+    assert r["coherence"] is not None
+    assert r["coherence"].shape == r["displacement_mm"].shape
+    assert float(np.median(r["coherence"])) == pytest.approx(0.9, abs=0.02), \
+        "picked up the decoy's 0.99, so it read the wrapped grid"
+
+
+def test_mask_polarity_rejects_water_and_missing_subswaths(tmp_path):
+    """
+    The three-digit code again: `mask == 0` keeps exactly the pixels invalid in
+    both acquisitions. Both stripes must be gone and the rest must survive.
+    """
+    f = tmp_path / synth.granule_name()
+    t = synth.write_gunw(f, truth_mm=50.0, water_stripe=True, unusable_stripe=True)
+    r = read_gunw(f, auto_ref=True)
+    assert not r["valid"][:12, :].any(), "water pixels survived"
+    assert not r["valid"][-12:, :].any(), "zero-subswath pixels survived"
+    kept = int((r["valid"] & t["aoi"]).sum())
+    assert kept > 0.5 * t["n_aoi_usable"], (
+        f"only {kept} of {t['n_aoi_usable']} usable AOI pixels survived - "
+        "polarity is likely inverted")
+
+
+def test_ionosphere_screen_is_subtracted(tmp_path):
+    """A 30 mm screen is added to the phase and must not reach the answer."""
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0, iono_mm=30.0)
+    with_corr = _median_in_aoi(read_gunw(f, auto_ref=True, apply_iono=True))
+    assert with_corr == pytest.approx(50.0, abs=TOL_MM)
+
+
+def test_reference_lands_outside_the_aoi_when_it_can(tmp_path):
+    """
+    Referencing inside the AOI subtracts part of what is being measured and
+    drives any AOI-wide signal toward zero - which is how a real 48 mm summer
+    displacement was reported as -4.89 mm, and how a non-detection was made to
+    look stronger than the data supports.
+    """
+    f = tmp_path / synth.granule_name()
+    t = synth.write_gunw(f, truth_mm=50.0)
+    r = read_gunw(f, auto_ref=True)
+    assert r["ref_grid"] is not None, "no reference chosen at all"
+    i, j = r["ref_grid"]
+    assert not t["aoi"][i, j], f"reference landed inside the AOI at ({i}, {j})"
+    assert _median_in_aoi(r) == pytest.approx(50.0, abs=TOL_MM)
+
+
+def test_reference_survives_a_partly_invalid_scene(tmp_path):
+    """
+    Demanding a fully-valid block is too strict once coherence drops: six of
+    fifteen real pairs found none outside the AOI and fell back inside it. With
+    holes punched in the stable ground the answer must still come back right.
+    """
+    f = tmp_path / synth.granule_name()
+    t = synth.write_gunw(f, truth_mm=50.0, hole_fraction=0.06)
+    r = read_gunw(f, auto_ref=True)
+    assert r["ref_grid"] is not None, (
+        "no reference found - the search is too strict for a realistic scene")
+    i, j = r["ref_grid"]
+    assert not t["aoi"][i, j], "fell back to referencing inside the AOI"
+    assert _median_in_aoi(r) == pytest.approx(50.0, abs=TOL_MM)
+
+
+# ---------------------------------------------------------------------------
+# Integrity and cross-product checks
+# ---------------------------------------------------------------------------
+def test_truncated_product_is_reported_not_skipped(tmp_path):
+    """
+    A short download raises only on open. In a batch that was one ERROR among
+    hundreds of INFO lines, the loop continued, the run exited zero, and an
+    epoch vanished from the network without comment.
+    """
+    good = tmp_path / synth.granule_name(ref="20260101", sec="20260113")
+    bad = tmp_path / synth.granule_name(ref="20260113", sec="20260125")
+    synth.write_gunw(good, truth_mm=50.0)
+    synth.write_gunw(bad, truth_mm=50.0)
+    with open(bad, "r+b") as fh:                       # lose the last 40%
+        fh.truncate(int(bad.stat().st_size * 0.6))
+
+    ok, broken = verify_products([good, bad])
+    assert [p.name for p in ok] == [good.name]
+    assert [p.name for p, _ in broken] == [bad.name]
+
+
+def test_duplicate_products_flag_a_whole_fringe_disagreement():
+    """
+    PR and UR builds of identical acquisitions cannot disagree about ground
+    motion, so any gap is processing error - and a gap landing on a fringe
+    multiple names its own cause.
+    """
+    rows = [
+        {"reference": "20260816", "secondary": "20260828", "median": -14.66,
+         "mean_coherence": 0.64, "file": "NISAR_L2_PR_GUNW_x.h5",
+         "wavelength_m": synth.WAVELENGTH_M},
+        {"reference": "20260816", "secondary": "20260828", "median": -279.80,
+         "mean_coherence": 0.64, "file": "NISAR_L2_UR_GUNW_x.h5",
+         "wavelength_m": synth.WAVELENGTH_M},
+    ]
+    flagged = check_consistency(rows)
+    assert len(flagged) == 1
+    assert flagged[0]["fringes"] == pytest.approx(2.17, abs=0.05)
+
+
+def test_a_duplicate_with_no_valid_pixels_is_reported_not_crashed_on():
+    """
+    report() returns early without a 'median' when a pair has nothing valid, so
+    check_consistency raised KeyError on any duplicate group containing one.
+
+    That is where duplicates actually live: monsoon pairs run at 1-3% AOI
+    coverage and the co-event pair ships both a routine and an urgent product.
+    A batch would die after the last product and before the CSV was written -
+    the same failure mode, and the same silence, as the key mismatch above.
+    """
+    rows = [
+        {"reference": "20260816", "secondary": "20260828", "valid_px": 0,
+         "file": "NISAR_L2_PR_GUNW_x.h5"},                       # no 'median'
+        {"reference": "20260816", "secondary": "20260828", "median": -14.66,
+         "mean_coherence": 0.64, "file": "NISAR_L2_UR_GUNW_x.h5",
+         "wavelength_m": synth.WAVELENGTH_M},
+    ]
+    assert check_consistency(rows) == []                # must not raise, must not flag
+
+
+def test_consistency_sizes_a_fringe_from_the_products_own_wavelength():
+    """
+    report() never emitted wavelength_m, so the fringe test silently fell back
+    to the module constant. A product on a different centre frequency would
+    then be judged against the wrong cycle length.
+    """
+    rows = [
+        {"reference": "20260816", "secondary": "20260828", "median": 0.0,
+         "mean_coherence": 0.6, "file": "NISAR_L2_PR_GUNW_x.h5",
+         "wavelength_m": 0.4},
+        {"reference": "20260816", "secondary": "20260828", "median": 200.0,
+         "mean_coherence": 0.6, "file": "NISAR_L2_UR_GUNW_x.h5",
+         "wavelength_m": 0.4},
+    ]
+    flagged = check_consistency(rows)
+    assert len(flagged) == 1
+    # one fringe at lambda = 0.4 m is 200 mm, so this gap is exactly one cycle
+    assert flagged[0]["fringes"] == pytest.approx(1.0, abs=0.01)
+
+
+def test_consistency_survives_a_product_with_no_coherence_layer():
+    rows = [
+        {"reference": "20260816", "secondary": "20260828", "median": 0.0,
+         "mean_coherence": None, "file": "NISAR_L2_PR_GUNW_x.h5"},
+        {"reference": "20260816", "secondary": "20260828", "median": 5.0,
+         "mean_coherence": None, "file": "NISAR_L2_UR_GUNW_x.h5"},
+    ]
+    check_consistency(rows)                             # must not raise
+
+
+def test_nodata_is_decided_on_raw_phase_not_the_ionosphere_corrected_array(tmp_path):
+    """
+    GUNW fills nodata with exact zeros and the ionosphere screen is not zero
+    there, so subtracting the screen first turns every nodata pixel into a
+    small non-zero number and the `phase != 0` test stops finding any of them.
+
+    Reading with and without the screen must therefore gate the SAME pixels.
+    It survived only because connectedComponents happens to reject the same
+    cells, and that layer is optional.
+    """
+    f = tmp_path / synth.granule_name()
+    truth = synth.write_gunw(f, truth_mm=50.0, iono_mm=40.0, nodata_fraction=0.20)
+    assert truth["n_nodata"] > 500, "fixture must actually contain unfilled cells"
+
+    r = read_gunw(f, auto_ref=True, apply_iono=True)
+
+    # Not one unfilled cell may be counted as a measurement, screen or no screen.
+    leaked = int((r["valid"] & truth["nodata"]).sum())
+    assert leaked == 0, (
+        f"{leaked} of {truth['n_nodata']} nodata cells survived gating - the "
+        "phase == 0 test is running on the ionosphere-corrected array")
+
+    # And the decision must not depend on whether the screen was removed.
+    without = read_gunw(f, auto_ref=True, apply_iono=False)
+    assert np.array_equal(r["valid"], without["valid"])
+
+
+def test_consistency_check_runs_on_reader_output_keys(tmp_path):
+    """
+    It once looked up "reference_date" while report() returned "reference".
+    Every batch raised KeyError after the last product and before the CSV was
+    written; piping stderr through grep hid it, and a stale CSV was read as
+    current for two rounds. The keys must match what the reader actually emits.
+    """
+    from gunw_reader import report
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0)
+    row = report(read_gunw(f, auto_ref=True))
+    check_consistency([row, dict(row)])                # must not raise
+    for key in ("reference", "secondary", "median", "mean_coherence", "file"):
+        assert key in row, f"report() no longer emits {key!r}"
+
+
+# ---------------------------------------------------------------------------
+# Track has to survive into the derived statistics.
+# ---------------------------------------------------------------------------
+def test_track_is_recovered_from_the_granule_name():
+    """
+    Export filenames carry only dates, so nothing downstream can recover the
+    geometry - and geometry is the largest single control on data quality
+    here, with floors differing about fivefold between the two tracks. Pooling
+    them gives a median that describes neither, which is the trap the GOFF
+    season analysis documents and local_floor.py fell into.
+    """
+    from gunw_reader import track_of
+    assert track_of("NISAR_L2_PR_GOFF_006_098_A_016_007_4000_SH_20251128T233919") == "ASC 098"
+    assert track_of("NISAR_L2_PR_GUNW_006_048_D_074_007_2000_SH_20251125T125813") == "DESC 048"
+    assert track_of("NISAR_L2_UR_GOFF_028_098_A_016_029_4000_SH_20260819T233918") == "ASC 098"
+
+
+def test_a_name_that_is_not_a_granule_yields_no_track():
+    """Silence beats a wrong label: an empty track is visibly missing."""
+    from gunw_reader import track_of
+    assert track_of("GOFF_20251128_20251210_PR_HH-layer2.tif") == ""
+    assert track_of("") == ""
+
+
+
+def test_uint32_mask_decodes_low_byte_separately_from_iono_bit_and_anomaly_flags():
+    """P05023 mask values must not be parsed as one giant decimal code."""
+    raw = np.array([[
+        11, 12, 111, 16777228, 16777216, 16777340, 255,
+        0x0000010C, 0x0001000C, 0x0200000C,
+    ]], dtype=np.uint32)
+    raw_before = raw.copy()
+    corrected = decode_gunw_mask(raw, apply_iono=True)
+    uncorrected = decode_gunw_mask(raw, apply_iono=False)
+
+    assert np.array_equal(raw, raw_before)
+    assert corrected["land_valid_subswaths_low_byte"].tolist() == [[
+        True, True, False, True, False, False, False, True, True, True
+    ]]
+    assert corrected["ionosphere_interpolated_mask"].tolist() == [[
+        False, False, False, True, True, True, False, False, False, False
+    ]]
+    assert corrected["anomaly_flags_nonzero"].tolist() == [[
+        False, False, False, False, False, False, False, True, True, False
+    ]]
+    assert corrected["reserved_bits_nonzero"].tolist() == [[
+        False, False, False, False, False, False, False, False, False, True
+    ]]
+    assert corrected["usable_mask_for_policy"].tolist() == [[
+        True, True, False, False, False, False, False, False, False, False
+    ]]
+    assert uncorrected["usable_mask_for_policy"].tolist() == [[
+        True, True, False, True, False, False, False, False, False, False
+    ]]
+
+
+def test_aoi_mask_refuses_to_guess_a_missing_source_crs():
+    xs = np.linspace(500_000, 501_000, 11)
+    ys = np.linspace(3_200_000, 3_199_000, 11)
+    with pytest.raises(ValueError, match="no EPSG/CRS metadata"):
+        build_aoi_mask(xs, ys, SOURCE_RING, None)
+
+
+def test_fixed_aoi_grid_refuses_to_guess_a_missing_source_crs():
+    xs = np.linspace(500_000, 501_000, 11)
+    ys = np.linspace(3_200_000, 3_199_000, 11)
+    with pytest.raises(ValueError, match="without source EPSG/CRS"):
+        aoi_grid(xs, ys, SOURCE_RING, None)
+
+
+def test_unvalidated_gunw_mask_dtypes_fail_closed():
+    import pytest
+    with pytest.raises(TypeError, match="Unsupported GUNW mask dtype"):
+        decode_gunw_mask(np.array([[12]], dtype=np.uint16))
+    with pytest.raises(TypeError, match="Unsupported GUNW mask dtype"):
+        decode_gunw_mask(np.array([[12]], dtype=np.int64))
+
+
+def test_missing_mask_fails_closed_instead_of_skipping_quality_gates(tmp_path):
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0)
+    with h5py.File(f, "a") as h5:
+        del h5[synth.UNW]["mask"]
+    with pytest.raises(RuntimeError, match="missing required shape-compatible layers"):
+        read_gunw(f, auto_ref=True)
+
+
+def test_missing_connected_components_fails_closed(tmp_path):
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0)
+    with h5py.File(f, "a") as h5:
+        del h5[f"{synth.UNW}/HH"]["connectedComponents"]
+    with pytest.raises(RuntimeError, match="connectedComponents"):
+        read_gunw(f, auto_ref=True)
+
+
+def test_referenced_measurement_does_not_leak_across_unwrapping_components(tmp_path):
+    f = tmp_path / synth.granule_name()
+    truth = synth.write_gunw(f, truth_mm=50.0, far_component=2, far_fringes=2.0)
+    # Add a second valid connected component within the actual AOI. The reader
+    # must not subtract one component's arbitrary phase constant from the other.
+    with h5py.File(f, "a") as h5:
+        path = f"{synth.UNW}/HH/connectedComponents"
+        components = h5[path][()]
+        cols = np.indices(components.shape)[1]
+        second = truth["aoi"] & (cols > int(components.shape[1] * 0.58))
+        components[second] = 7
+        h5[path][...] = components
+    result = read_gunw(f, auto_ref=True)
+    assert result["reference_component_id"] is not None
+    assert result["component_rejected_pixels"] > 0
+    # The explicit validity mask excludes incompatible-component measurements.
+    with h5py.File(f, "r") as h5:
+        components = h5[f"{synth.UNW}/HH/connectedComponents"][()]
+    assert not (result["valid"] & (components != result["reference_component_id"])).any()
+    assert result["gate_rejections"]["different component from reference"] > 0
+
+
+def test_valid_zero_phase_is_not_dropped_without_fill_evidence(tmp_path):
+    """A numerical zero is not nodata when the packed mask and component are valid."""
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0)
+    from gunw_reader import AOIS
+    with h5py.File(f, "a") as h5:
+        base = f"{synth.UNW}/HH"
+        phase_ds = h5[f"{base}/unwrappedPhase"]
+        phase = phase_ds[()]
+        xs = h5[f"{base}/xCoordinates"][()]
+        ys = h5[f"{base}/yCoordinates"][()]
+        mask = h5[f"{synth.UNW}/mask"][()]
+        components = h5[f"{base}/connectedComponents"][()]
+        inside = build_aoi_mask(xs, ys, AOIS["lhende"], 4326)
+        candidates = np.argwhere(inside & (mask == 11) & (components > 0))
+        assert candidates.size
+        row, col = (int(v) for v in candidates[len(candidates) // 2])
+        phase[row, col] = 0.0
+        phase_ds[...] = phase
+    result = read_gunw(f, auto_ref=True)
+    assert result["valid"][row, col], (
+        "zero phase with valid component/mask/coherence metadata must remain measurable"
+    )
+
+
+def test_layover_shadow_mask_is_not_a_substitute_for_packed_gunw_mask(tmp_path):
+    f = tmp_path / synth.granule_name()
+    synth.write_gunw(f, truth_mm=50.0)
+    with h5py.File(f, "a") as h5:
+        parent = h5[synth.UNW]
+        original = parent["mask"][()]
+        del parent["mask"]
+        parent.create_dataset("layoverShadowMask", data=original)
+    with pytest.raises(RuntimeError, match="missing required shape-compatible layers"):
+        read_gunw(f, auto_ref=True)

@@ -41,7 +41,7 @@ jobs:
       SARGUARDIAN_AOI_WKT: ${{ inputs.aoi_wkt }}
       AOI_ORCHESTRATION_SHA: ${{ inputs.orchestration_sha }}
       AOI_ORCHESTRATION_BRANCH: main
-      SCIENCE_COMMIT: f038e4dfdb53c8d9793aaaefe173570a1032026c
+      SCIENCE_COMMIT: 006d4cd1485cf80e509eaf8717c12e9c6390ac09
       EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
       EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
       EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
@@ -50,7 +50,7 @@ jobs:
       GOOGLE_DRIVE_PARENT_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_PARENT_FOLDER_ID || secrets.GOOGLE_DRIVE_FOLDER_ID }}
     steps:
     - name: Checkout orchestration code
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         repository: ${{ github.repository }}
         ref: ${{ inputs.orchestration_sha }}
@@ -61,21 +61,25 @@ jobs:
         test "$(git rev-parse HEAD)" = "$AOI_ORCHESTRATION_SHA"
 
         '
-    - name: Checkout pinned dynamic-AOI scientific engine
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ github.repository }}
-        ref: f038e4dfdb53c8d9793aaaefe173570a1032026c
-        path: science-source
-    - name: Verify pinned science revision
+    - name: Verify immutable NISAR source snapshot
       shell: bash
       run: 'set -euo pipefail
 
-        test "$(git -C science-source rev-parse HEAD)" = "$SCIENCE_COMMIT"
+        test -s migration/source-snapshots/nisar-pins/006d4cd/README.md
+
+        test -s migration/source-snapshots/nisar-pins/006d4cd/requirements.txt
+
+        test -s migration/source-snapshots/nisar-pins/006d4cd/src/gunw_reader.py
+
+        test -s migration/source-snapshots/nisar-pins/006d4cd/src/goff_reader.py
+
+        test -s migration/source-snapshots/nisar-pins/006d4cd/src/local_floor.py
+
+        echo "SCIENCE_REVISION_VERIFIED=$SCIENCE_COMMIT"
 
         '
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
       with:
         python-version: '3.13'
         check-latest: false
@@ -83,9 +87,9 @@ jobs:
       shell: bash
       run: 'set -euo pipefail
 
-        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r science-source/requirements.txt
+        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r migration/source-snapshots/nisar-pins/006d4cd/requirements.txt
 
-        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r tools/requirements-retention.txt
+        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r engines/find-displacements/tools/requirements-retention.txt
 
         '
     - name: Product slot 001 - recovery-final

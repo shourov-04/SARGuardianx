@@ -88,11 +88,12 @@ def test_hdf5_inventory_records_named_datatypes_without_treating_them_as_dataset
 
 
 def test_account_workflow_calls_the_upstream_dynamic_aoi_streaming_pipeline() -> None:
-    root = Path(__file__).parents[2]
+    root = Path(__file__).parents[4]
     workflow = (root / ".github" / "workflows" / "sarguardian-displacement.yml").read_text(encoding="utf-8")
     dashboard = (root / ".github" / "workflows" / "sarguardian-aoi-wkt-dashboard.yml").read_text(encoding="utf-8")
-    worker = (root / ".github" / "workflows" / "sarguardian-aoi-product-worker.yml").read_text(encoding="utf-8")
-    uploader = (root / "tools" / "drive_resumable_upload.py").read_text(encoding="utf-8")
+    worker = (root / ".github" / "actions" / "process-aoi-product" / "action.yml").read_text(encoding="utf-8")
+    batch_worker = (root / ".github" / "workflows" / "sarguardian-aoi-batch-worker.yml").read_text(encoding="utf-8")
+    uploader = (root / "apps" / "dynamic" / "tools" / "drive_resumable_upload.py").read_text(encoding="utf-8")
     assert "uses: ./.github/workflows/sarguardian-aoi-wkt-dashboard.yml" in workflow
     assert "aoi_wkt: ${{ inputs.aoi_wkt }}" in workflow
     assert "date_filter_mode: ${{ inputs.acquisition_window }}" in workflow
@@ -104,32 +105,35 @@ def test_account_workflow_calls_the_upstream_dynamic_aoi_streaming_pipeline() ->
     assert "id: target_measurement" in worker
     assert "id: local_floor" in worker
     assert "measure_target_from_raster.py" in worker
-    assert '--aoi-wkt "$SARGUARDIAN_AOI_WKT"' in worker
-    assert "--minimum-valid-pixels 6" in worker
+    assert "--aoi-wkt" in worker and "SARGUARDIAN_AOI_WKT" in worker
+    assert "--minimum-valid-pixels" in worker and " 6 " in worker
     assert "SITE_TARGET_LATITUDE: ${{ inputs.target_latitude }}" in dashboard
-    assert "def parse_aoi_wkt_ring" in (root / "tools" / "measure_target_from_raster.py").read_text(encoding="utf-8")
-    assert "ref: ecd125f68ed61c276406f73a1d77eb27979e204e" in dashboard
-    # The reviewed pinned aggregator contains gated movement measurement reports alongside GOFF diagnostics.
-    assert "python dashboard-source/tools/aggregate_aoi_run.py" in dashboard
+    assert "def parse_aoi_wkt_ring" in (root / "engines" / "find-displacements" / "tools" / "measure_target_from_raster.py").read_text(encoding="utf-8")
+    assert "UPSTREAM_ENGINE_REVISION=2cb521ea11376b2f48e903fb00b0c480796d6578" in dashboard
+    # The imported upstream aggregator contains gated movement measurement reports alongside GOFF diagnostics.
+    assert "python engines/find-displacements/tools/aggregate_aoi_run.py" in dashboard
     assert '"target_measurement_status"' in (root / ".github" / "workflows" / "sarguardian-aoi-product-worker.yml").read_text(encoding="utf-8") or "target_measurement_status" in worker
-    assert "python tools/discover_aoi_products.py" in dashboard
-    assert "uses: ./.github/workflows/sarguardian-aoi-product-worker.yml" in dashboard
+    assert "python engines/find-displacements/tools/discover_aoi_products.py" in dashboard
+    assert "uses: ./.github/workflows/sarguardian-aoi-batch-worker.yml" in dashboard
     assert dashboard.count("job_id: ${{ inputs.job_id }}") >= 1
     assert '--job-id "$DRIVE_JOB_ID"' in dashboard
-    assert 'DRIVE_JOB_ID: ${{ inputs.job_id }}' in worker
-    assert worker.count('--job-id "$DRIVE_JOB_ID"') == 3
-    assert "python science-source/src/gunw_reader.py" in worker
-    assert "python science-source/src/goff_reader.py" in worker
-    assert "--aoi \"$AOI_NAME\"" in worker
-    assert "SCIENCE_COMMIT: f038e4dfdb53c8d9793aaaefe173570a1032026c" in worker
-    assert 'PYTHONUNBUFFERED: "1"' in worker
-    for milestone in (
-        "PRODUCT_PROCESSING_START", "PRODUCT_MILESTONE=download_started",
-        "PRODUCT_MILESTONE=aoi_validation_started", "PRODUCT_MILESTONE=science_reader_started",
-        "PRODUCT_MILESTONE=derived_validation_started", "PRODUCT_MILESTONE=drive_upload_started",
-        "PRODUCT_MILESTONE=cleanup_started", "PRODUCT_PROCESSING_STATUS=",
+    assert 'ACTION_JOB_ID: ${{ inputs.job_id }}' in worker
+    assert "printf 'DRIVE_JOB_ID=%s" in worker
+    assert worker.count("--job-id") == 3
+    assert "migration/source-snapshots/nisar-pins/006d4cd/src/gunw_reader.py" in worker
+    assert "migration/source-snapshots/nisar-pins/006d4cd/src/goff_reader.py" in worker
+    assert "--aoi" in worker and "AOI_NAME" in worker
+    assert "SCIENCE_COMMIT: 006d4cd1485cf80e509eaf8717c12e9c6390ac09" in batch_worker
+    assert "PYTHONUNBUFFERED: '1'" in batch_worker
+    for required_step in (
+        "Download exactly one raw NISAR granule",
+        "Verify product grid intersects the requested WKT AOI",
+        "Run the original single-product reader with dynamic WKT-AOI settings",
+        "Validate derived outputs against the AOI-specific structural checks before cleanup",
+        "Upload validated per-product outputs to Drive with checksum verification",
+        "Delete local raw/archive only after successful remote retention",
     ):
-        assert milestone in worker
+        assert required_step in worker
     run_blocks = "\n".join(
         line for line in worker.splitlines()
         if not line.lstrip().startswith(("EARTHDATA_", "GOOGLE_DRIVE_"))

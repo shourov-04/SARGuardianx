@@ -180,11 +180,11 @@ jobs:
       SARGUARDIAN_AOI_WKT: ${{ inputs.aoi_wkt }}
       AOI_ORCHESTRATION_BRANCH: main
     steps:
-    - name: Checkout backend orchestration tools
-      uses: actions/checkout@v4
+    - name: Checkout the exact monorepo engine revision
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: ${{ github.repository }}
-        ref: d9bdd8da0501e387e80880ca91d53bc4d7cae0b8
+        ref: ${{ github.sha }}
     - name: Record exact orchestration revision for every downstream product
       id: orch
       shell: bash
@@ -193,28 +193,18 @@ jobs:
         sha="$(git rev-parse HEAD)"
         echo "sha=$sha" >> "$GITHUB_OUTPUT"
         echo "AOI_ORCHESTRATION_SHA=$sha" >> "$GITHUB_ENV"
-    - name: Checkout pinned dynamic-WKT scientific engine
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ github.repository }}
-        ref: f038e4dfdb53c8d9793aaaefe173570a1032026c
-        path: science-source
-    - name: Checkout pinned dashboard retention dependencies for the manifest stage
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ github.repository }}
-        ref: ecd125f68ed61c276406f73a1d77eb27979e204e
-        path: dashboard-source
-    - name: Verify manifest-stage retention dependency revision
+    - name: Verify imported engine and immutable science snapshot
       shell: bash
       run: |
         set -euo pipefail
-        expected="ecd125f68ed61c276406f73a1d77eb27979e204e"
-        actual="$(git -C dashboard-source rev-parse HEAD)"
-        test "$actual" = "$expected"
-        echo "MANIFEST_RETENTION_DEPENDENCIES_SHA=$actual"
+        test -s engines/find-displacements/tools/discover_aoi_products.py
+        test -s engines/find-displacements/tools/aggregate_aoi_run.py
+        test -s migration/source-snapshots/nisar-pins/006d4cd/requirements.txt
+        test -s migration/source-snapshots/nisar-pins/006d4cd/src/gunw_reader.py
+        echo "UPSTREAM_ENGINE_REVISION=2cb521ea11376b2f48e903fb00b0c480796d6578"
+        echo "SCIENCE_COMMIT=006d4cd1485cf80e509eaf8717c12e9c6390ac09"
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
       with:
         python-version: '3.13'
         check-latest: false
@@ -222,8 +212,8 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r science-source/requirements.txt
-        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r dashboard-source/tools/requirements-retention.txt
+        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r migration/source-snapshots/nisar-pins/006d4cd/requirements.txt
+        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r engines/find-displacements/tools/requirements-retention.txt
         python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 rasterio matplotlib
     - name: Validate WKT, search ASF exact polygon and build input manifest
       id: discover
@@ -237,8 +227,8 @@ jobs:
       run: |
         set -euo pipefail
         mkdir -p "$RUNNER_TEMP/sarguardian-aoi/manifest"
-        python tools/discover_aoi_products.py \
-          --science-root "$PWD/science-source" \
+        python engines/find-displacements/tools/discover_aoi_products.py \
+          --science-root "$PWD/migration/source-snapshots/nisar-pins/006d4cd" \
           --start-date "$START_DATE" --end-date "$END_DATE" \
           --date-filter-mode "$DATE_FILTER_MODE" \
           --product-type "${{ inputs.product_type || 'BOTH' }}" \
@@ -249,7 +239,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        python tools/plan_aoi_batches.py \
+        python apps/dynamic/tools/plan_aoi_batches.py \
           --manifest "$RUNNER_TEMP/sarguardian-aoi/manifest/manifest.json" \
           --out "$RUNNER_TEMP/sarguardian-aoi/manifest/primary-batch-plan.json"
     - name: Report durable discovered-product counts
@@ -261,7 +251,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        PYTHONPATH="$GITHUB_WORKSPACE/Backend" python -m science_adapter.dynamic_callback \
+        PYTHONPATH="$GITHUB_WORKSPACE/apps/dynamic/Backend" python -m science_adapter.dynamic_callback \
           --state running --stage products_discovered --sequence 2 \
           --callback-url "${{ inputs.callback_url }}" --callback-secret "$CALLBACK_SECRET" \
           --job-id "${{ inputs.job_id }}" --request-fingerprint "$REQUEST_FINGERPRINT" \
@@ -280,10 +270,10 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        python tools/prepare_aoi_drive_folders.py \
+        python apps/dynamic/tools/prepare_aoi_drive_folders.py \
           --manifest "$RUNNER_TEMP/sarguardian-aoi/manifest/manifest.json"
     - name: Publish the selected-product manifest
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: sarguardian-aoi-run-manifest
         path: |
@@ -325,24 +315,24 @@ jobs:
       terminal_failure_count: ${{ steps.plan.outputs.terminal_failure_count }}
     steps:
     - name: Checkout receipt-check tools at the manifest's exact code revision
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: ${{ needs.manifest.outputs.orchestration_sha }}
         repository: ${{ github.repository }}
     - name: Download AOI run manifest
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: sarguardian-aoi-run-manifest
         path: ${{ runner.temp }}/sarguardian-aoi/retry/manifest
     - name: Download product checkpoints
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         pattern: sarguardian-granule-*
         path: ${{ runner.temp }}/sarguardian-aoi/retry/products
     - name: Download cleanup receipts
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         pattern: sarguardian-cleanup-*
         path: ${{ runner.temp }}/sarguardian-aoi/retry/cleanups
@@ -352,13 +342,13 @@ jobs:
       run: |
         set -euo pipefail
         root="$RUNNER_TEMP/sarguardian-aoi/retry"
-        python tools/plan_aoi_retries.py \
+        python apps/dynamic/tools/plan_aoi_retries.py \
           --manifest "$root/manifest/manifest.json" \
           --product-root "$root/products" --cleanup-root "$root/cleanups" \
           --out "$root/retry-plan.json" --include-terminal-recovery
     - name: Preserve retry decision evidence
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: sarguardian-aoi-retry-plan
         path: ${{ runner.temp }}/sarguardian-aoi/retry/retry-plan.json
@@ -405,24 +395,24 @@ jobs:
       terminal_failure_count: ${{ steps.plan.outputs.terminal_failure_count }}
     steps:
     - name: Checkout receipt-check tools at the manifest's exact code revision
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: ${{ needs.manifest.outputs.orchestration_sha }}
         repository: ${{ github.repository }}
     - name: Download AOI run manifest
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: sarguardian-aoi-run-manifest
         path: ${{ runner.temp }}/sarguardian-aoi/final/manifest
     - name: Download final product checkpoints
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         pattern: sarguardian-granule-*
         path: ${{ runner.temp }}/sarguardian-aoi/final/products
     - name: Download final cleanup receipts
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         pattern: sarguardian-cleanup-*
         path: ${{ runner.temp }}/sarguardian-aoi/final/cleanups
@@ -432,13 +422,13 @@ jobs:
       run: |
         set -euo pipefail
         root="$RUNNER_TEMP/sarguardian-aoi/final"
-        python tools/plan_aoi_retries.py \
+        python apps/dynamic/tools/plan_aoi_retries.py \
           --manifest "$root/manifest/manifest.json" \
           --product-root "$root/products" --cleanup-root "$root/cleanups" \
           --out "$root/final-plan.json" --final-audit
     - name: Preserve final recovery decision evidence
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: sarguardian-aoi-final-plan
         path: ${{ runner.temp }}/sarguardian-aoi/final/final-plan.json
@@ -470,39 +460,21 @@ jobs:
       SITE_TARGET_LONGITUDE: ${{ inputs.target_longitude }}
     steps:
     - name: Checkout orchestration tools at the manifest's exact code revision
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: ${{ needs.manifest.outputs.orchestration_sha }}
         repository: ${{ github.repository }}
-    - name: Checkout the reviewed target-free AOI screening and per-pixel LOS dashboard builder and aggregator
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ github.repository }}
-        ref: ecd125f68ed61c276406f73a1d77eb27979e204e
-        path: dashboard-source
-    - name: Verify pinned target-free AOI screening and per-pixel LOS dashboard builder and aggregation source
-      shell: bash
-      run: |
-        set -euo pipefail
-        expected="ecd125f68ed61c276406f73a1d77eb27979e204e"
-        actual="$(git -C dashboard-source rev-parse HEAD)"
-        test "$actual" = "$expected"
-        echo "DASHBOARD_BUILDER_SHA=$actual"
-    - name: Checkout the same pinned science engine for WKT/provenance checks
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ github.repository }}
-        ref: f038e4dfdb53c8d9793aaaefe173570a1032026c
-        path: science-source
-    - name: Verify dashboard code matches the product manifest revision
+    - name: Verify dashboard engine, immutable science snapshot and orchestration revision
       shell: bash
       run: |
         set -euo pipefail
         actual="$(git rev-parse HEAD)"
         test "$actual" = "$AOI_ORCHESTRATION_SHA"
+        test -s engines/find-displacements/tools/aggregate_aoi_run.py
+        test -s migration/source-snapshots/nisar-pins/006d4cd/src/gunw_reader.py
         echo "AOI_ORCHESTRATION_REVISION_VERIFIED=$actual"
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
       with:
         python-version: '3.13'
         check-latest: false
@@ -510,17 +482,17 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r science-source/requirements.txt
-        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r tools/requirements-retention.txt
+        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r migration/source-snapshots/nisar-pins/006d4cd/requirements.txt
+        python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 -r engines/find-displacements/tools/requirements-retention.txt
         python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 rasterio matplotlib
     - name: Download current AOI run manifest
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: sarguardian-aoi-run-manifest
         path: ${{ runner.temp }}/sarguardian-aoi/manifest
     - name: Download product processing receipts and clipped exports
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         pattern: sarguardian-granule-*
         path: ${{ runner.temp }}/sarguardian-aoi/product-artifacts
@@ -532,10 +504,10 @@ jobs:
         root="$RUNNER_TEMP/sarguardian-aoi"
         mkdir -p "$root/dashboard"
         status=0
-        python dashboard-source/tools/aggregate_aoi_run.py \
+        python engines/find-displacements/tools/aggregate_aoi_run.py \
           --manifest "$root/manifest/manifest.json" \
           --artifact-root "$root/product-artifacts" \
-          --science-root "$PWD/science-source" \
+          --science-root "$PWD/migration/source-snapshots/nisar-pins/006d4cd" \
           --out-root "$root/dashboard" 2>&1 | tee "$root/dashboard-build.log" || status=$?
         echo "script_exit=$status" >> "$GITHUB_OUTPUT"
         if [[ -s "$root/dashboard/aoi-run-summary.json" ]]; then
@@ -577,7 +549,7 @@ jobs:
         fi
     - name: Upload offline HTML dashboard and result files
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: sarguardian-aoi-dashboard-${{ github.run_id }}-${{ github.run_attempt }}
         path: |
@@ -596,12 +568,12 @@ jobs:
           echo "PRIVATE_DRIVE_DASHBOARD_UPLOAD=SKIPPED_MISSING_BUNDLE_OR_DRIVE_SECRETS"
           exit 0
         fi
-        python tools/drive_resumable_upload.py \
+        python apps/dynamic/tools/drive_resumable_upload.py \
           --root "$root" --run-name "$RUN_ID_SAFE" \
           --job-id "$DRIVE_JOB_ID" \
           --files "$root/aoi-derived-results.zip" "$root/aoi-run-summary.json" "$root/products.csv" \
           --out "$root/drive-dashboard-upload-receipt.json"
-        python tools/drive_resumable_upload.py \
+        python apps/dynamic/tools/drive_resumable_upload.py \
           --root "$root" --run-name "$RUN_ID_SAFE" \
           --job-id "$DRIVE_JOB_ID" \
           --files "$root/drive-dashboard-upload-receipt.json" \
@@ -609,7 +581,7 @@ jobs:
         echo "PRIVATE_DRIVE_DASHBOARD_UPLOAD=PASS"
     - name: Preserve private-storage receipt for the account result callback
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: sarguardian-aoi-account-callback
         path: ${{ runner.temp }}/sarguardian-aoi/dashboard/drive-dashboard-upload-receipt.json

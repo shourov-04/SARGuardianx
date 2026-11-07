@@ -12,7 +12,7 @@ import math
 import re
 from dataclasses import dataclass
 
-SCIENCE_COMMIT = "10639a916c9829850775410b3ed7de62e527770d"
+SCIENCE_COMMIT = "006d4cd1485cf80e509eaf8717c12e9c6390ac09"
 MAX_AOI_AREA_KM2 = 1_000
 MAX_AOI_VERTICES = 1_000
 
