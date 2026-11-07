@@ -1,0 +1,146 @@
+name: Find Displacements live ASF catalogue diagnostic
+run-name: Find Displacements catalogue diagnostic · ${{ inputs.start_date }}..${{ inputs.end_date }}
+
+# Manual-only catalogue diagnostic. No Earthdata download, SAR processing or Drive upload.
+on:
+  workflow_dispatch:
+    inputs:
+      aoi_wkt:
+        description: "One WGS84 polygon ring; coordinates are longitude latitude."
+        type: string
+        required: true
+        default: "POLYGON ((84.99140223107368 28.499061219892724, 84.945606791564 28.28220804656594, 85.18844724834032 28.270753557383987, 85.20285565607317 28.414428221022945, 85.11305609453537 28.49639181334535, 84.99140223107368 28.499061219892724))"
+      start_date:
+        description: "Inclusive secondary-acquisition date (YYYY-MM-DD)."
+        type: string
+        required: true
+        default: "2026-06-17"
+      end_date:
+        description: "Inclusive secondary-acquisition date (YYYY-MM-DD)."
+        type: string
+        required: true
+        default: "2026-09-15"
+      date_filter_mode:
+        description: "Secondary date only or both acquisitions inside the interval."
+        type: choice
+        required: true
+        options:
+          - both-acquisitions-in-window
+          - secondary-acquisition-in-window
+        default: secondary-acquisition-in-window
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monorepo-find-displacements-catalogue-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Require explicit catalogue-diagnostic opt-in
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Fail closed before external catalogue access
+        env:
+          MONOREPO_DISPLACEMENT_DIAGNOSTICS_ENABLED: ${{ vars.MONOREPO_DISPLACEMENT_DIAGNOSTICS_ENABLED }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$MONOREPO_DISPLACEMENT_DIAGNOSTICS_ENABLED" != "true" ]]; then
+            echo "::error::Live ASF catalogue diagnostics are disabled. Enable only for a planned read-only diagnostic."
+            exit 1
+          fi
+          echo "MONOREPO_FIND_DISPLACEMENTS_CATALOGUE_GATE=PASS"
+
+  catalog-only:
+    name: Query ASF NISAR catalogue without downloading products
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SARGUARDIAN_AOI_WKT: ${{ inputs.aoi_wkt }}
+      START_DATE: ${{ inputs.start_date }}
+      END_DATE: ${{ inputs.end_date }}
+      DATE_FILTER_MODE: ${{ inputs.date_filter_mode }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out Monorepo source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          check-latest: false
+
+      - name: Install dependencies for exact promoted science pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 \
+            -r migration/source-snapshots/nisar-pins/006d4cd/requirements.txt
+          python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 \
+            -r engines/find-displacements/tools/requirements-retention.txt
+
+      - name: Query ASF using the exact AOI geometry
+        id: discover
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          root="$RUNNER_TEMP/find-displacements-catalogue"
+          mkdir -p "$root"
+          echo "AOI_DIAGNOSTIC_START_DATE=$START_DATE"
+          echo "AOI_DIAGNOSTIC_END_DATE=$END_DATE"
+          echo "AOI_DIAGNOSTIC_DATE_FILTER_MODE=$DATE_FILTER_MODE"
+          echo "AOI_DIAGNOSTIC_PROFILE=full-aoi-baseline"
+          python -u engines/find-displacements/tools/discover_aoi_products.py \
+            --science-root "$GITHUB_WORKSPACE/migration/source-snapshots/nisar-pins/006d4cd" \
+            --start-date "$START_DATE" \
+            --end-date "$END_DATE" \
+            --date-filter-mode "$DATE_FILTER_MODE" \
+            --run-profile full-aoi-baseline \
+            --retention-profile derived-only \
+            --out "$root/manifest.json" > "$root/discovery.log" 2>&1
+          rc=$?
+          cat "$root/discovery.log"
+          echo "AOI_DIAGNOSTIC_EXIT_CODE=$rc" | tee -a "$root/discovery.log"
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          exit "$rc"
+
+      - name: Write catalogue summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Find Displacements live ASF catalogue diagnostic"
+            echo
+            echo "- Date window: $START_DATE through $END_DATE"
+            echo "- Date filter: $DATE_FILTER_MODE"
+            echo "- Science source: immutable 006d4cd snapshot"
+            echo "- This workflow performs catalogue search only; it does not download or process SAR products."
+            echo
+            if [ -f "$RUNNER_TEMP/find-displacements-catalogue/discovery.log" ]; then
+              grep -E '^(ASF_CATALOG_RESPONSE|ASF_CATALOG_FALLBACK|AOI_DISCOVERY_COUNTS|AOI_WKT_SHA256|AOI_DISCOVERY_INVENTORY|AOI_UNIQUE_ACQUISITION_PAIRS_ACROSS_FAMILIES|AOI_SUPPORTED_VARIANTS|AOI_DUPLICATE_VARIANTS_EXCLUDED|AOI_PRODUCTS_SELECTED|AOI_PRODUCTS_WITH_REFERENCE_OUTSIDE_WINDOW|AOI_BOUNDARY_PAIR_PRODUCTS_INCLUDED|AOI_BASELINE_GUNW|AOI_BASELINE_GOFF|ERROR=|AOI_DIAGNOSTIC_EXIT_CODE)' "$RUNNER_TEMP/find-displacements-catalogue/discovery.log" || true
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload catalogue-only diagnostics and manifest
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: find-displacements-catalogue-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/find-displacements-catalogue/discovery.log
+            ${{ runner.temp }}/find-displacements-catalogue/manifest.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve failure status when discovery fails
+        if: steps.discover.outcome == 'failure'
+        run: exit 1

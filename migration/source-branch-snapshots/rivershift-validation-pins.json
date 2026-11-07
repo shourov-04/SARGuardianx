@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "generated_date": "2026-11-05",
+  "policy": "ARCHIVAL_SNAPSHOTS_WITH_SEPARATE_REVIEWED_ROOT_PORTS",
+  "purpose": "Preserve every unmerged RiverShift validation source file at its exact Git blob identity. The archived workflows remain immutable source evidence only. Separate root ports for the OPERA DSWx-S1 and Run #36 replay workflows are independently reviewed, manual-only, fail-closed Monorepo Preview workflows; the archive files themselves are never activated or run on general pushes.",
+  "sources": [
+    {
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_branch": "feat/rivershift-opera-rtc-s1-inventory-fallback-20261105",
+      "source_head_commit": "092f6020a83dc3f149b1a4fdca5d7f0a9ba3d5f9",
+      "source_commit_message": "Expose RTC-S1 availability diagnostics in Actions summary",
+      "destination_prefix": "migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/",
+      "files": [
+        {
+          "source_path": ".github/workflows/river-shift-opera-dswx-s1-retained-replay.yml",
+          "destination_path": "migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/.github/workflows/river-shift-opera-dswx-s1-retained-replay.yml",
+          "source_blob_sha": "322ed1167dc3c8eeee0949f5f178b66606e462d4",
+          "destination_blob_sha": "322ed1167dc3c8eeee0949f5f178b66606e462d4",
+          "lines": 229,
+          "safety": "Contains workflow_dispatch and a push trigger on a sentinel path. Archive only. If later promoted, remove push trigger, use manual dispatch, pin all actions/checkout refs and complete the workflow dry-run first."
+        },
+        {
+          "source_path": "tools/river_shift/run_opera_dswx_s1_reference.py",
+          "destination_path": "migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/tools/river_shift/run_opera_dswx_s1_reference.py",
+          "source_blob_sha": "9c409b87a60a231a616fb8bead2dcba59db007fe",
+          "destination_blob_sha": "9c409b87a60a231a616fb8bead2dcba59db007fe",
+          "lines": 1340,
+          "safety": "Contains OPERA DSWx-S1 WTR reference and optional RTC-S1 inventory logic. NISAR GCOV remains primary. RTC-S1 inventory is backscatter discovery only and cannot produce water labels or agreement metrics."
+        },
+        {
+          "source_path": "tools/river_shift/tests/test_opera_dswx_s1_reference.py",
+          "destination_path": "migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/tools/river_shift/tests/test_opera_dswx_s1_reference.py",
+          "source_blob_sha": "859ec6ead863a69809deab7278535dd8c2f1abd2",
+          "destination_blob_sha": "859ec6ead863a69809deab7278535dd8c2f1abd2",
+          "lines": 663,
+          "safety": "Archived regression tests; not yet executed in the Monorepo path. Required dependencies and source imports must be reconciled before promotion."
+        }
+      ]
+    },
+    {
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_branch": "feat/rivershift-run36-retrospective-replay-20261105",
+      "source_head_commit": "f161088833d069f100d2500c050f3a332547da66",
+      "source_commit_message": "Validate retained Run 36 replay workflow contract",
+      "destination_prefix": "migration/source-branch-snapshots/backend-rivershift-run36-replay-f161088/",
+      "files": [
+        {
+          "source_path": ".github/workflows/river-shift-run36-retrospective-replay.yml",
+          "destination_path": "migration/source-branch-snapshots/backend-rivershift-run36-replay-f161088/.github/workflows/river-shift-run36-retrospective-replay.yml",
+          "source_blob_sha": "e2e10c6e326e36a167c36ba72c8aed03328c28e2",
+          "destination_blob_sha": "e2e10c6e326e36a167c36ba72c8aed03328c28e2",
+          "lines": 87,
+          "safety": "Archive only. Keep manual-only if promoted. It downloads retained artifacts and must not trigger automatically on general pushes."
+        },
+        {
+          "source_path": "tools/river_shift/replay_retained_run36.py",
+          "destination_path": "migration/source-branch-snapshots/backend-rivershift-run36-replay-f161088/tools/river_shift/replay_retained_run36.py",
+          "source_blob_sha": "160eb29a8cb68f6894a7638c4c38ba7ed24db19c",
+          "destination_blob_sha": "160eb29a8cb68f6894a7638c4c38ba7ed24db19c",
+          "lines": 347,
+          "safety": "Retrospective reproduction only. Output explicitly identifies RETROSPECTIVE_RECOMPUTED_NOT_ORIGINAL_WORKER_ARTIFACT; the first event-proximal NISAR acquisition was 20 days after the user-supplied event date, not event-peak evidence."
+        }
+      ]
+    }
+  ],
+  "scientific_boundaries": [
+    "NISAR GCOV remains the primary measurement input.",
+    "OPERA DSWx-S1 is a cross-sensor SAR-derived water reference, not field truth.",
+    "Only OPERA WTR classes 0 and 1 are labelled; inundated vegetation and masked classes remain NoData.",
+    "Independent-reference scores require the temporal and common-support gates; otherwise return NO_MATCH_NO_SCORE, never zero.",
+    "RTC-S1 backscatter inventory is not a water mask and cannot produce WTR agreement scores.",
+    "Run #36 replay is retrospective reproducibility evidence, not an original worker artifact or proof of independent geophysical accuracy.",
+    "No validation workflow from this archive is activated by normal Monorepo pushes."
+  ],
+  "promotion_gates": [
+    "Resolve every runtime module/import against engines/river-shift/tools/river_shift and its declared requirements.",
+    "Run the archived unit suite in a pinned, isolated environment.",
+    "Mock CMR discovery, OPERA download receipts, checksum mismatch, mixed tracks/orbits, unknown WTR classes, no-scene and temporal-mismatch outcomes.",
+    "Remove any automatic push trigger and explicitly pin every action and external source checkout.",
+    "Dry-run artifact retrieval, HMAC callback/status, artifact retention and final failure propagation without consuming production credentials.",
+    "Keep the independent score NO_MATCH_NO_SCORE when the reference or temporal/common-support gate fails."
+  ]
+}

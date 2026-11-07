@@ -1,0 +1,40 @@
+name: Migration Metadata Validation
+
+on:
+  pull_request:
+    paths:
+      - "docs/migration/source-pins.json"
+      - "tools/validate_migration_manifest.py"
+      - ".gitleaksignore"
+      - "tools/validate_gitleaks_allowlist.py"
+      - ".github/workflows/migration-metadata.yml"
+  push:
+    branches:
+      - main
+      - "migration/**"
+    paths:
+      - "docs/migration/source-pins.json"
+      - "tools/validate_migration_manifest.py"
+      - ".gitleaksignore"
+      - "tools/validate_gitleaks_allowlist.py"
+      - ".github/workflows/migration-metadata.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-source-manifest:
+    name: Validate source provenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Validate source manifest
+        run: python tools/validate_migration_manifest.py
+      - name: Validate exact Gitleaks exceptions
+        run: python tools/validate_gitleaks_allowlist.py

@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "audited_at": "2026-11-06",
+  "repository": "moshiour0/SARGuardian-Monorepo",
+  "branch": "migration/source-snapshot-import",
+  "source_baselines": {
+    "dynamic_main": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+    "backend_main": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+    "known_place_pr85": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+    "active_find_displacements_science_pin": "006d4cd1485cf80e509eaf8717c12e9c6390ac09",
+    "known_place_author_exact_backend_pin": "b825df798ea4cb9874aa10dd01174d2a8ef73cba",
+    "known_place_generic_active_backend_dispatch_pin": "0e0611c12913044787ee84a39fa60a81d30ae516",
+    "known_place_generic_dispatcher_main_blob": "90b254a68dae6c8449edeacf4ea205743ee89380",
+    "known_place_generic_reusable_workflow_blob": "844cdeefd2d78c74c623a4d910f9b6091789d79b",
+    "known_place_author_exact_reusable_workflow_pin": "d847b0461a2fec1bdf2abcce0a6b1d2f9dddabc9"
+  },
+  "evidence": {
+    "backend_actions_query": "GET /repos/moshiour0/SARGuardian-backend/actions/runs?event=workflow_dispatch&branch=main&per_page=100",
+    "backend_runs_observed": 100,
+    "find_displacements": {
+      "workflow": ".github/workflows/sarguardian-aoi-wkt-dashboard.yml",
+      "run_id": 42097077601,
+      "created_at_utc": "2026-11-05T19:46:26Z",
+      "event": "workflow_dispatch",
+      "conclusion": "success",
+      "jobs_total": 20,
+      "jobs_success": 19,
+      "jobs_failed_initial_attempt": 1,
+      "failed_initial_product": "GUNW-002",
+      "retry_job": "Retry AOI product — GUNW-002 / Process GUNW-002 (retry-1)",
+      "retry_conclusion": "success",
+      "final_dashboard_job": "Assemble results dashboard and downloadable maps",
+      "final_dashboard_conclusion": "success",
+      "terminal_callback_job": "Report validated terminal state",
+      "terminal_callback_conclusion": "success"
+    },
+    "river_shift": {
+      "workflow": ".github/workflows/river-shift-gcov-process.yml",
+      "run_id": 42089984247,
+      "created_at_utc": "2026-11-05T19:02:08Z",
+      "event": "workflow_dispatch",
+      "conclusion": "failure",
+      "catalogue_submitted_granules": 14,
+      "catalogue_exact_matches": 14,
+      "stop_stage": "acquisition_compatibility_audit",
+      "error_code": "EVENT_WINDOW_NOT_BRACKETED",
+      "product_batches_started": false,
+      "interpretation": "The selected event date was not bracketed by compatible acquisitions. The worker failed closed before product processing; this is not evidence of a broken download/runtime/Drive pipeline."
+    },
+    "known_place": {
+      "generic_dispatch_workflow": ".github/workflows/know-place-aoi-dispatcher.yml",
+      "generic_reusable_workflow": ".github/workflows/know-place-aoi-analysis.yml",
+      "generic_dispatcher_main_sha": "90b254a68dae6c8449edeacf4ea205743ee89380",
+      "generic_reusable_workflow_sha": "0e0611c12913044787ee84a39fa60a81d30ae516",
+      "generic_backend_science_ref": "0e0611c12913044787ee84a39fa60a81d30ae516",
+      "feat_branch": "feat/know-place-analysis",
+      "feat_branch_tip": "bd7a59c54ddae7c19fd88896e877c3a530b43d9e",
+      "two_polygon_pr": 85,
+      "two_polygon_pr_state": "open",
+      "two_polygon_pr_draft": true,
+      "two_polygon_pr_merged": false,
+      "two_polygon_pr_base": "feat/know-place-analysis",
+      "two_polygon_pr_base_sha": "bd7a59c54ddae7c19fd88896e877c3a530b43d9e",
+      "two_polygon_pr_head": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "active_generic_pin_commits_ahead_of_pr85": 32,
+      "active_generic_pin_commits_ahead_of_feature_branch_tip": 78,
+      "pr86_candidate_handoff_merged_to_main": "50af9e5413db5f797c4f2866bc4685be84a9fcef",
+      "pr86_scope": "GOFF candidate-to-Known-Place suggested measurement polygon handoff only; not the generic two-polygon engine merge",
+      "dispatch_query_first_page": {
+        "total_available": 115,
+        "records_returned": 100,
+        "generic_dispatches": 16,
+        "generic_success": 8,
+        "generic_failure": 7,
+        "generic_cancelled": 1,
+        "author_exact_dispatches": 1,
+        "author_exact_success": 0,
+        "author_exact_failure": 1
+      },
+      "latest_generic_successful_runs": [
+        {
+          "run_id": 41533701551,
+          "created_at_utc": "2026-11-02T22:02:09Z",
+          "referenced_reusable_sha": "0e0611c12913044787ee84a39fa60a81d30ae516",
+          "artifact": "know-place-aoi-41533701551-1",
+          "artifact_bytes": 214216
+        },
+        {
+          "run_id": 41533582770,
+          "created_at_utc": "2026-11-02T22:01:21Z",
+          "referenced_reusable_sha": "0e0611c12913044787ee84a39fa60a81d30ae516",
+          "artifact": "know-place-aoi-41533582770-1",
+          "artifact_bytes": 25775
+        }
+      ],
+      "author_exact": {
+        "dispatcher": ".github/workflows/know-place-paper-reproduction-dispatcher.yml",
+        "dispatcher_main_sha": "42216b46f0b4b842c079dc25eccd015efa9ffbb5",
+        "reusable_workflow_sha": "d847b0461a2fec1bdf2abcce0a6b1d2f9dddabc9",
+        "backend_code_pin": "b825df798ea4cb9874aa10dd01174d2a8ef73cba",
+        "last_run_id": 41423614257,
+        "conclusion": "failure",
+        "consent_gate": "PASS",
+        "derived_bundle_drive_receipt": "PASS",
+        "cleanup_status": "BLOCKED_PRE_DELETE_VALIDATION",
+        "cleanup_error": "SOURCE_MANIFEST_STATUS_NOT_COMPLETE",
+        "scientific_metrics": "NOT_COMPLETE",
+        "interpretation": "Not a successful end-to-end author-exact replay; keep manual consent and the separate Monorepo gate closed."
+      },
+      "interpretation": "Backend main contains live generic and author-exact dispatchers, but they call immutable reusable-workflow pins outside main. Generic Known Place has successful dispatch runs. The feature branch itself was not merged to main; PR85 remains Draft/Open. Monorepo therefore pins the current generic runtime at 0e061 and keeps PR85 lineage as a separate source snapshot."
+    },
+    "dynamic_ci": {
+      "frontend_workflow": ".github/workflows/frontend-tests.yml",
+      "backend_workflow": ".github/workflows/backend-tests.yml",
+      "note": "Dynamic's recent workflow history is frontend/backend CI; product processing dispatches are observed in SARGuardian-backend."
+    },
+    "backend_actions_total_count": 115,
+    "backend_actions_first_page_size": 100
+  },
+  "application_paths": {
+    "web": "apps/web",
+    "api": "apps/api",
+    "api_entry": "apps/api/app/main.py",
+    "persistence": "apps/api/app/persistence.py",
+    "owner_scope_contract": "tools/tests/test_api_owner_scoping_contract.py"
+  },
+  "runtime_paths": [
+    {
+      "id": "find-displacements",
+      "priority": "core-currently-proven",
+      "api_routes": [
+        "POST /api/displacement-jobs",
+        "GET /api/displacement-jobs/{job_id}",
+        "POST /api/displacement-jobs/{job_id}/callback",
+        "GET /api/displacement-jobs/{job_id}/dashboard"
+      ],
+      "api_adapter": "apps/api/app/displacements.py",
+      "dispatch_workflow": ".github/workflows/sarguardian-aoi-wkt-dashboard.yml",
+      "reusable_dependencies": [
+        ".github/workflows/sarguardian-aoi-dashboard-engine.yml",
+        ".github/workflows/sarguardian-aoi-product-worker.yml"
+      ],
+      "science_pin": "006d4cd1485cf80e509eaf8717c12e9c6390ac09",
+      "runtime_evidence": "Backend run 42097077601 completed successfully; one initial product download failed and was recovered by a retry of that product only; dashboard and terminal reporting succeeded.",
+      "migration_status": "primary-proven-runtime-path"
+    },
+    {
+      "id": "river-shift",
+      "priority": "connected-feature-positive-case-required",
+      "api_routes": [
+        "POST /api/river-shift/jobs",
+        "GET /api/river-shift/jobs",
+        "GET /api/river-shift/jobs/{job_id}",
+        "POST /api/river-shift/jobs/{job_id}/callback"
+      ],
+      "api_adapter": "apps/api/app/river_shift_jobs.py",
+      "dispatch_workflow": ".github/workflows/river-shift-gcov-process.yml",
+      "engine_root": "engines/river-shift",
+      "runtime_evidence": "Run 42089984247 reached catalogue matching (14/14) and failed closed at EVENT_WINDOW_NOT_BRACKETED before any product batch.",
+      "migration_status": "connected-feature-positive-case-pilot-required"
+    },
+    {
+      "id": "known-place-generic",
+      "priority": "active-api-connected-and-successfully-run",
+      "api_routes": [
+        "POST /api/known-place-analysis",
+        "GET /api/known-place-analysis/requests/{request_id}"
+      ],
+      "api_adapter": "apps/api/app/known_place.py",
+      "dispatch_workflow": ".github/workflows/know-place-aoi-dispatcher.yml",
+      "reusable_dependencies": [
+        ".github/workflows/know-place-aoi-analysis.yml"
+      ],
+      "science_pin": "0e0611c12913044787ee84a39fa60a81d30ae516",
+      "runtime_evidence": "Backend main dispatcher 90b254a calls reusable workflow and backend science ref 0e0611c. The latest queried first page of workflow_dispatch/main runs included 16 generic Known Place runs, 8 successful; runs 41533701551 and 41533582770 succeeded and retained result artifacts.",
+      "migration_status": "active-api-runtime-migrated-exact-current-pin"
+    },
+    {
+      "id": "known-place-author-exact-p05023",
+      "priority": "connected-manual-consent-gated-pilot-required",
+      "api_routes": [
+        "POST /api/known-place-paper-reproduction",
+        "GET /api/known-place-paper-reproduction/requests/{request_id}"
+      ],
+      "api_adapter": "apps/api/app/known_place.py",
+      "dispatch_workflow": ".github/workflows/know-place-paper-reproduction-dispatcher.yml",
+      "reusable_dependencies": [
+        ".github/workflows/know-place-author-exact-replay.yml"
+      ],
+      "backend_code_pin": "b825df798ea4cb9874aa10dd01174d2a8ef73cba",
+      "runtime_evidence": "Backend main dispatcher referenced d847b and b825df. Only observed run 41423614257 passed consent and Drive bundle upload but failed source-manifest completeness; raw cleanup blocked and final scientific/retention gate failed.",
+      "migration_status": "connected-manual-consent-gated-not-successfully-replayed",
+      "backend_workflow_pin": "d847b0461a2fec1bdf2abcce0a6b1d2f9dddabc9"
+    }
+  ],
+  "runtime_workflow_allowlist": [
+    ".github/workflows/sarguardian-aoi-wkt-dashboard.yml",
+    ".github/workflows/sarguardian-aoi-dashboard-engine.yml",
+    ".github/workflows/sarguardian-aoi-product-worker.yml",
+    ".github/workflows/know-place-aoi-dispatcher.yml",
+    ".github/workflows/know-place-aoi-analysis.yml"
+  ],
+  "migration_ci_allowlist": [
+    ".github/workflows/snapshot-regression-tests.yml",
+    ".github/workflows/backend-source-regression-tests.yml",
+    ".github/workflows/migration-metadata.yml",
+    ".github/workflows/historical-secret-scan.yml",
+    ".github/workflows/retention-archive-tests.yml",
+    ".github/workflows/dashboard-assets-test.yml",
+    ".github/workflows/sarguardian-aoi-code-validation.yml"
+  ],
+  "cutover_gates": [
+    "All current Dynamic API routes remain owner-authenticated and all user-facing read paths remain owner-scoped.",
+    "Configure Monorepo-only server-side Firebase, Supabase service key, GitHub Actions token, callback HMAC secrets and Drive result-read OAuth; do not copy Production secrets into Git or Web/Vite variables.",
+    "Verify Monorepo Preview authenticated login, map/catalogue smoke, owner-scoped job writes/reads and job status polling.",
+    "Run Find Displacements in an isolated Monorepo Preview with mock dispatch first, then a consented small real-data pilot; verify exact source pin, per-product retry, Drive receipts and terminal signed callback.",
+    "Run generic Known Place catalog-only Preview and a controlled positive-measurement pilot using the exact 0e061 runtime pin; verify two-polygon geometry, workflow correlation, artifact retrieval and Drive receipts.",
+    "Keep RiverShift gated until a scientifically eligible event window is bracketed and a positive-case GCOV pilot verifies all batches, failed-only retries, Drive receipts and signed callbacks.",
+    "Keep Author-Exact P05023 manually consent-gated until source-manifest completeness, five exact P05023 product hashes, raw cleanup receipt, Drive byte parity and all author science checks pass in a successful run.",
+    "Verify Monorepo Supabase nine migration filename/version/name mappings read-only; do not run db push, repair, replay or reset as a shortcut. Reconcile the separate Dynamic Production history independently.",
+    "Complete npm advisory/bundle review, independent science review, licensing review and rollback rehearsal before the merge sequence.",
+    "Merge migration PRs in sequence and change Production Vercel/API dispatch destinations only after explicit owner approval."
+  ],
+  "safety": {
+    "production_dispatch_targets_changed": false,
+    "production_vercel_aliases_changed": false,
+    "production_supabase_changed": false,
+    "monorepo_processing_gates_default_false": true,
+    "original_repositories_preserved": true
+  },
+  "gated_feature_workflow_allowlist": [
+    ".github/workflows/river-shift-gcov-process.yml",
+    ".github/workflows/know-place-paper-reproduction-dispatcher.yml",
+    ".github/workflows/know-place-author-exact-replay.yml"
+  ],
+  "preserved_disabled_feature_workflow_allowlist": []
+}

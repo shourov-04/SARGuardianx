@@ -1,0 +1,298 @@
+name: Find Displacements retained-artifact reassembly
+
+run-name: Find Displacements reassembly · ${{ inputs.checkpoint_run_id }} + ${{ inputs.product_run_id }}
+
+# Reassemble previously verified product artifacts only. Does not access ASF,
+# Earthdata, or raw SAR products. Inputs must be artifact runs in this repository.
+on:
+  workflow_dispatch:
+    inputs:
+      checkpoint_run_id:
+        description: "Monorepo Actions run containing the 32 verified product checkpoints and source manifest."
+        required: true
+        type: string
+      product_run_id:
+        description: "Monorepo Actions run containing the completed replacement product, cleanup receipt and manifest."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: monorepo-find-displacements-reassembly
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Require explicit retained-artifact reassembly opt-in
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate explicit repository gate and Monorepo run IDs
+        env:
+          MONOREPO_REASSEMBLY_ENABLED: ${{ vars.MONOREPO_FIND_DISPLACEMENT_REASSEMBLY_ENABLED }}
+          CHECKPOINT_RUN_ID: ${{ inputs.checkpoint_run_id }}
+          PRODUCT_RUN_ID: ${{ inputs.product_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$MONOREPO_REASSEMBLY_ENABLED" != "true" ]]; then
+            echo "::error::Find Displacements reassembly is disabled. Enable only for an approved Preview recovery test."
+            exit 1
+          fi
+          if [[ ! "$CHECKPOINT_RUN_ID" =~ ^[1-9][0-9]{5,19}$ ]]; then
+            echo "::error::CHECKPOINT_RUN_ID must be a numeric Monorepo Actions run ID."
+            exit 1
+          fi
+          if [[ ! "$PRODUCT_RUN_ID" =~ ^[1-9][0-9]{5,19}$ ]]; then
+            echo "::error::PRODUCT_RUN_ID must be a numeric Monorepo Actions run ID."
+            exit 1
+          fi
+          if [[ "$CHECKPOINT_RUN_ID" == "$PRODUCT_RUN_ID" ]]; then
+            echo "::error::Checkpoint and replacement-product run IDs must be distinct."
+            exit 1
+          fi
+          echo "MONOREPO_FIND_DISPLACEMENT_REASSEMBLY_GATE=PASS"
+          echo "REASSEMBLY_INPUTS=PASS"
+
+  reassemble:
+    name: Reassemble retained artifacts and rerun scientific parity gates
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: migration/source-snapshots/backend-pins/d9e67
+    env:
+      CHECKPOINT_RUN_ID: ${{ inputs.checkpoint_run_id }}
+      PRODUCT_RUN_ID: ${{ inputs.product_run_id }}
+      GOOGLE_DRIVE_OAUTH_CLIENT_JSON: ${{ secrets.GOOGLE_DRIVE_OAUTH_CLIENT_JSON }}
+      GOOGLE_DRIVE_REFRESH_TOKEN: ${{ secrets.GOOGLE_DRIVE_REFRESH_TOKEN }}
+      GOOGLE_DRIVE_PARENT_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_PARENT_FOLDER_ID }}
+      RUN_ID_SAFE: SARGuardian-Monorepo-Reassemble-${{ github.run_id }}-${{ github.run_attempt }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out full Monorepo history for immutable source pins
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact historical tool and science commits
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          SCIENCE_SOURCE_COMMIT: ab547ecc82bcc4d6ccef545a59852536c2beacc6
+          REASSEMBLY_SOURCE_COMMIT: d9e67df7d800032c37d23f74df44c98e3ab655f7
+        run: |
+          set -euo pipefail
+          git cat-file -e "$SCIENCE_SOURCE_COMMIT^{commit}"
+          git cat-file -e "$REASSEMBLY_SOURCE_COMMIT^{commit}"
+          test -s migration/source-snapshots/backend-pins/d9e67/tools/aggregate_streamed_outputs.py
+          test -s migration/source-snapshots/backend-pins/d9e67/tools/resume_streamed_run.py
+          echo "REASSEMBLY_TOOL_SOURCE_PIN=$REASSEMBLY_SOURCE_COMMIT"
+          echo "REASSEMBLY_SCIENCE_SOURCE_PIN=$SCIENCE_SOURCE_COMMIT"
+          echo "REASSEMBLY_SOURCE_PINS=PASS"
+
+      - name: Extract exact pinned NISAR science source from Monorepo Git history
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        env:
+          SCIENCE_SOURCE_COMMIT: ab547ecc82bcc4d6ccef545a59852536c2beacc6
+        run: |
+          set -euo pipefail
+          science_root="$RUNNER_TEMP/sarguardian-reassemble-science"
+          mkdir -p "$science_root"
+          git archive "$SCIENCE_SOURCE_COMMIT" | tar -x -C "$science_root"
+          test -s "$science_root/requirements.txt"
+          test -s "$science_root/src/gunw_reader.py"
+          echo "REASSEMBLY_SCIENCE_TREE_EXTRACTION=PASS"
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          check-latest: false
+
+      - name: Install exact science and reassembly dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 \
+            -r "$RUNNER_TEMP/sarguardian-reassemble-science/requirements.txt"
+          python -m pip install --disable-pip-version-check --no-cache-dir --retries 5 --timeout 45 \
+            -r tools/requirements-retention.txt
+
+      - name: Download original checkpoint run manifest from this Monorepo
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sarguardian-stream-run-manifest
+          run-id: ${{ inputs.checkpoint_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/sarguardian-reassemble/base-manifest
+
+      - name: Download completed-product run manifest from this Monorepo
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sarguardian-stream-run-manifest
+          run-id: ${{ inputs.product_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/sarguardian-reassemble/product-manifest
+
+      - name: Download original product checkpoints
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sarguardian-granule-*
+          run-id: ${{ inputs.checkpoint_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/sarguardian-reassemble/base-granules
+
+      - name: Download original cleanup evidence
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sarguardian-cleanup-*
+          run-id: ${{ inputs.checkpoint_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/sarguardian-reassemble/base-cleanups
+
+      - name: Download replacement-product checkpoints
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sarguardian-granule-*
+          run-id: ${{ inputs.product_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/sarguardian-reassemble/product-granules
+
+      - name: Download replacement-product cleanup evidence
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: sarguardian-cleanup-*
+          run-id: ${{ inputs.product_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/sarguardian-reassemble/product-cleanups
+
+      - name: Verify manifests and prepare exact reassembly manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/sarguardian-reassemble"
+          mkdir -p "$root/run-manifest" "$root/output"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from tools.resume_streamed_run import validate_resume_compatibility
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "sarguardian-reassemble"
+          base_path = root / "base-manifest" / "manifest.json"
+          product_path = root / "product-manifest" / "manifest.json"
+          base = json.loads(base_path.read_text(encoding="utf-8"))
+          product = json.loads(product_path.read_text(encoding="utf-8"))
+          validate_resume_compatibility(product, base)
+
+          products = product.get("products")
+          if not isinstance(products, list) or len(products) != 33:
+              raise SystemExit("REASSEMBLY_MANIFEST_MUST_CONTAIN_EXACTLY_33_PRODUCTS")
+          ids = [str(row.get("id", "")) for row in products]
+          if len(set(ids)) != 33 or not all(ids):
+              raise SystemExit("REASSEMBLY_MANIFEST_PRODUCT_IDS_INVALID")
+          counts = {
+              kind: sum(row.get("product_type") == kind for row in products)
+              for kind in ("GUNW", "GOFF")
+          }
+          if counts != {"GUNW": 15, "GOFF": 18}:
+              raise SystemExit(f"REASSEMBLY_MANIFEST_PRODUCT_COUNTS_INVALID={counts}")
+
+          if product.get("science_commit") != "ab547ecc82bcc4d6ccef545a59852536c2beacc6":
+              raise SystemExit("REASSEMBLY_SCIENCE_COMMIT_DOES_NOT_MATCH_EXACT_BASELINE_PIN")
+
+          product["source_artifact_runs"] = {
+              "checkpoint_run_id": os.environ["CHECKPOINT_RUN_ID"],
+              "completed_product_run_id": os.environ["PRODUCT_RUN_ID"],
+          }
+          product["reassembly_only"] = True
+          product["run_id"] = f'{os.environ["GITHUB_RUN_ID"]}-{os.environ["GITHUB_RUN_ATTEMPT"]}'
+          target = root / "run-manifest" / "manifest.json"
+          target.write_text(json.dumps(product, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+          print(f"REASSEMBLY_MANIFEST_COMPATIBILITY=PASS PRODUCTS={len(products)}")
+          print(f"REASSEMBLY_PRODUCT_COUNTS=GUNW:{counts['GUNW']},GOFF:{counts['GOFF']}")
+          print(f"REASSEMBLY_CHECKPOINT_RUN={os.environ['CHECKPOINT_RUN_ID']}")
+          print(f"REASSEMBLY_COMPLETED_PRODUCT_RUN={os.environ['PRODUCT_RUN_ID']}")
+          print(f"REASSEMBLY_OUTPUT_RUN_ID={product['run_id']}")
+          PY
+
+      - name: Merge verified checkpoints without downloading SAR products
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/sarguardian-reassemble"
+          python tools/resume_streamed_run.py merge \
+            --kind granule --previous-root "$root/base-granules" \
+            --current-root "$root/product-granules" --output-root "$root/granule-artifacts"
+          python tools/resume_streamed_run.py merge \
+            --kind cleanup --previous-root "$root/base-cleanups" \
+            --current-root "$root/product-cleanups" --output-root "$root/cleanup-artifacts"
+
+      - name: Aggregate outputs and run baseline comparisons
+        id: aggregate_results
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/sarguardian-reassemble"
+          mkdir -p "$root/output"
+          log="$root/aggregation.log"
+          status=0
+          python tools/aggregate_streamed_outputs.py \
+            --science-root "$RUNNER_TEMP/sarguardian-reassemble-science" \
+            --manifest "$root/run-manifest/manifest.json" \
+            --artifact-root "$root/granule-artifacts" \
+            --cleanup-artifact-root "$root/cleanup-artifacts" \
+            --out-root "$root/output" > "$log" 2>&1 || status=$?
+          cat "$log"
+          if [[ -s "$root/output/batch-equivalence-report.json" ]]; then
+            report_status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$root/output/batch-equivalence-report.json")"
+          else
+            report_status="NO_REPORT"
+            status=1
+          fi
+          echo "status=$report_status" >> "$GITHUB_OUTPUT"
+          echo "script_exit=$status" >> "$GITHUB_OUTPUT"
+          echo "BATCH_EQUIVALENCE_STATUS=$report_status"
+          if [[ "$status" -ne 0 || "$report_status" != "PASS" ]]; then
+            echo "::error::Reassembly did not pass all baseline parity checks."
+            exit 1
+          fi
+
+      - name: Upload final replay bundle and report to Drive only after PASS
+        if: steps.aggregate_results.outputs.status == 'PASS' && steps.aggregate_results.outputs.script_exit == '0'
+        env:
+          OUT_ROOT: ${{ runner.temp }}/sarguardian-reassemble/output
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="$(find "$OUT_ROOT" -maxdepth 1 -name 'sarguardian-*-results.zip' -type f -print -quit)"
+          report="$OUT_ROOT/batch-equivalence-report.json"
+          test -s "$bundle" && test -s "$report"
+          python tools/drive_resumable_upload.py \
+            --root "$OUT_ROOT" --run-name "$RUN_ID_SAFE" \
+            --files "$bundle" "$report" --out "$OUT_ROOT/drive-run-upload-receipt.json"
+          python tools/drive_resumable_upload.py \
+            --root "$OUT_ROOT" --run-name "$RUN_ID_SAFE" \
+            --files "$OUT_ROOT/drive-run-upload-receipt.json" \
+            --out "$OUT_ROOT/drive-run-receipt-upload.json"
+          echo "FINAL_RUN_BUNDLE_DRIVE_VERIFICATION=PASS"
+
+      - name: Retain reassembly report, bundle and diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sarguardian-monorepo-reassemble-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/sarguardian-reassemble/output
+            ${{ runner.temp }}/sarguardian-reassemble/aggregation.log
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6

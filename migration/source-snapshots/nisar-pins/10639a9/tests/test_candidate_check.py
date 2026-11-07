@@ -1,0 +1,205 @@
+"""
+The geometry cross-check, which used to point the wrong way.
+
+Why these tests exist
+=====================
+candidate_check.py once declared a signal real when both geometries agreed in
+sign. That is backwards. Downslope motion has one magnitude projected onto two
+different lines of sight, so where the sensitivities have opposite signs - most
+of this terrain - real motion appears with OPPOSITE LOS signs. Matching signs
+are the signature of a path delay, which adds the same extra path length
+whichever direction the radar looks from.
+
+The bug never crashed and never produced a wrong number. It printed a confident
+sentence about a phase artefact. On the Langtang candidate (sens_asc -0.732,
+sens_desc +0.472, both rates negative) it said "a geometry-specific artefact is
+ruled out: this is a real phase signal". The final verdict survived only because
+a later seasonality test caught what this one had waved through.
+
+So the first test below is the historical fault, stated as a number. The rest
+guard the two ways the test can be honest about not knowing.
+"""
+
+from __future__ import annotations
+
+import csv
+from candidate_check import (classify_geometry, exceeds_single_fringe, geometry_test,
+                             read_aoi, read_target)
+
+
+# The measured Langtang candidate: 28.27484 N, 85.47405 E.
+LANGTANG = dict(sens_asc=-0.732, sens_desc=+0.472)
+
+
+def test_same_signed_rates_are_a_path_delay_where_sensitivities_oppose():
+    """The historical fault. Both rates negative, sensitivities opposed."""
+    r = classify_geometry(v_asc=-3.49, v_desc=-1.47, **LANGTANG)
+    assert r["verdict"] == "delay"
+    assert not r["conclusive"]
+    assert "uncertainties/covariance" in r["conclusiveness_limit"]
+    # and it must be decided on the ratio, not on the signs alone
+    assert r["ratio_motion"] < 0 < r["ratio_measured"]
+
+
+def test_opposite_signed_rates_matching_the_geometry_are_motion():
+    """One downslope rate seen from both sides gives ratio sens_desc/sens_asc."""
+    d = 4.77                                    # mm/day downslope
+    r = classify_geometry(v_asc=LANGTANG["sens_asc"] * d,
+                          v_desc=LANGTANG["sens_desc"] * d, **LANGTANG)
+    assert r["verdict"] == "motion"
+    assert not r["conclusive"]
+    assert abs(r["implied_downslope_mm_day"] - d) < 1e-6
+
+
+def test_a_blind_track_yields_no_verdict():
+    """
+    Near-zero sensitivity means dividing by nearly nothing. The ratio is then
+    noise, and a verdict drawn from it is worse than no verdict.
+    """
+    r = classify_geometry(sens_asc=-0.05, sens_desc=+0.472,
+                          v_asc=-3.49, v_desc=-1.47)
+    assert r["verdict"] == "undetermined"
+    assert not r["conclusive"]
+
+
+def test_no_verdict_when_the_two_hypotheses_predict_the_same_ratio():
+    """
+    Where sens_desc/sens_asc is near +1, motion and delay make the same
+    prediction and no measurement separates them. Saying so is the only honest
+    answer available.
+    """
+    r = classify_geometry(sens_asc=-0.60, sens_desc=-0.62,
+                          v_asc=-3.0, v_desc=-3.1)
+    assert r["verdict"] == "undetermined"
+    assert not r["conclusive"]
+
+
+def test_verdict_follows_the_ratio_and_not_the_sign():
+    """
+    Two same-signed rates can still be motion, when the geometry says so. This
+    is the case the sign-based rule got right by accident and the ratio rule
+    gets right on purpose.
+    """
+    d = 2.0
+    r = classify_geometry(sens_asc=-0.80, sens_desc=-0.30,
+                          v_asc=-0.80 * d, v_desc=-0.30 * d)
+    assert r["verdict"] == "motion"
+
+
+def test_gentle_terrain_yields_no_verdict():
+    """
+    Measured at the Langtang candidate: widening the DEM stencil from 60 m to
+    300 m moves the aspect by 74 degrees and takes sens_asc from +0.020 to
+    -0.642, sign included. A 62-degree slope 3 km away holds its aspect to 4
+    degrees over the same range. Sensitivity on gentle ground is not a small
+    number, it is an undetermined one, and a ratio built on it decides nothing.
+    """
+    r = classify_geometry(sens_asc=-0.642, sens_desc=+0.495,
+                          v_asc=-3.49, v_desc=-1.47, slope_deg=5.0)
+    assert r["verdict"] == "undetermined"
+    assert not r["conclusive"]
+    # the same numbers on ground steep enough to trust do decide
+    r2 = classify_geometry(sens_asc=-0.642, sens_desc=+0.495,
+                           v_asc=-3.49, v_desc=-1.47, slope_deg=38.0)
+    assert r2["verdict"] == "delay"
+
+
+def test_ratio_nearest_prediction_is_never_called_conclusive_without_uncertainties():
+    # Exact synthetic ratios do not make a real measurement uncertainty-free.
+    r = classify_geometry(
+        sens_asc=-0.8, sens_desc=0.4,
+        v_asc=-1.6, v_desc=0.8,
+    )
+    assert r["verdict"] == "motion"
+    assert r["conclusive"] is False
+    assert "not supplied" in r["conclusiveness_limit"]
+
+
+def test_descriptive_delay_ratio_does_not_hard_reject_candidate(monkeypatch, capsys):
+    import geometry_merge
+
+    monkeypatch.setattr(geometry_merge, "slope_aspect", lambda lat, lon: (38.0, 351.0, 5370.0))
+    monkeypatch.setattr(
+        geometry_merge, "sensitivities",
+        lambda lat, lon, slope, aspect, minimum: [
+            {"track": "NISAR ASC 98", "ascending": True, "sensitivity": -0.732},
+            {"track": "NISAR DESC 48", "ascending": False, "sensitivity": 0.472},
+        ],
+    )
+    problems = []
+    geometry_test(28.27799, 85.52983, {"A": -3.49, "D": -1.47}, problems)
+    out = capsys.readouterr().out
+    assert "not a statistically conclusive rejection" in out
+    assert "PATH-DELAY HYPOTHESIS" in out
+    assert problems == ["geometry_ratio_closer_to_delay"]
+
+
+def test_target_and_aoi_rows_join_by_exact_granule_not_shared_dates(tmp_path):
+    asc = (
+        "NISAR_L2_PR_GUNW_024_098_A_016_025_4000_SH_"
+        "20260702T233920_20260702T233955_20260714T233920_20260714T233954_"
+        "P05023_F_F_J_001.h5"
+    )
+    desc = (
+        "NISAR_L2_PR_GUNW_024_048_D_074_026_2000_SH_"
+        "20260702T125813_20260702T125848_20260714T125813_20260714T125848_"
+        "P05023_N_F_J_001.h5"
+    )
+    target_log = tmp_path / "target.log"
+    target_log.write_text(
+        f"2026-07-02 -> 2026-07-14 [{asc}] : -2.00 mm (25 px, coh 0.80)\n"
+        f"2026-07-02 -> 2026-07-14 [{desc}] : +3.00 mm (27 px, coh 0.75)\n",
+        encoding="utf-8",
+    )
+    aoi_csv = tmp_path / "gunw_stats_source.csv"
+    with aoi_csv.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=["reference", "secondary", "median", "file"])
+        writer.writeheader()
+        writer.writerow({"reference": "20260702", "secondary": "20260714", "median": "-1.0", "file": asc})
+        writer.writerow({"reference": "20260702", "secondary": "20260714", "median": "2.0", "file": desc})
+
+    targets = read_target(target_log)
+    aoi = read_aoi(aoi_csv)
+    shared = set(targets) & set(aoi)
+    assert shared == {
+        ("20260702", "20260714", asc),
+        ("20260702", "20260714", desc),
+    }
+    assert targets[("20260702", "20260714", asc)][0] == -2.0
+    assert targets[("20260702", "20260714", desc)][0] == 3.0
+    assert aoi[("20260702", "20260714", asc)] == (-1.0, "A")
+    assert aoi[("20260702", "20260714", desc)] == (2.0, "D")
+
+
+def test_legacy_date_only_target_log_cannot_silently_join_to_wrong_track(tmp_path):
+    target_log = tmp_path / "legacy-target.log"
+    target_log.write_text(
+        "2026-07-02 -> 2026-07-14 : -2.00 mm (25 px, coh 0.80)\n",
+        encoding="utf-8",
+    )
+    targets = read_target(target_log)
+    key = ("20260702", "20260714", None)
+    assert key in targets
+    assert key[2] is None
+
+
+def test_phase_aliasing_screen_uses_per_pair_mm_not_aggregated_mm_per_day():
+    from gunw_reader import NISAR_LAMBDA_M
+
+    limit_mm = NISAR_LAMBDA_M * 1000.0 / 4.0
+    assert exceeds_single_fringe(limit_mm + 0.1)
+    assert exceeds_single_fringe(-(limit_mm + 0.1))
+    assert not exceeds_single_fringe(limit_mm)
+    assert not exceeds_single_fringe(float("nan"))
+    assert not exceeds_single_fringe(float("inf"))
+
+
+def test_nonfinite_geometry_inputs_and_ratios_fail_closed():
+    for args in (
+        dict(sens_asc=float("nan"), sens_desc=0.4, v_asc=1.0, v_desc=2.0),
+        dict(sens_asc=-0.8, sens_desc=0.4, v_asc=float("inf"), v_desc=2.0),
+        dict(sens_asc=-0.8, sens_desc=0.4, v_asc=1e-320, v_desc=1.0),
+    ):
+        result = classify_geometry(**args)
+        assert result["verdict"] == "undetermined"
+        assert not result["conclusive"]

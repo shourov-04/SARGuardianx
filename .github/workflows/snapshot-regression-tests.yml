@@ -1,0 +1,603 @@
+name: Snapshot Regression Tests
+
+on:
+  push:
+    branches:
+      - "migration/source-snapshot-import"
+    paths:
+      - "migration/source-snapshots/**"
+      - "migration/workflow-dispositions.json"
+      - "migration/active-runtime-scope.json"
+      - "migration/active-runtime-pins/**"
+      - "tools/validate_active_runtime_scope.py"
+      - "tools/validate_workflow_dispositions.py"
+      - "tools/validate_sarguardian_live_validation_workflow.py"
+      - ".github/workflows/sarguardian-live-validation.yml"
+      - "migration/source-branch-snapshots/**"
+      - ".github/workflows/know-place-aoi-analysis.yml"
+      - ".github/workflows/know-place-aoi-dispatcher.yml"
+      - "migration/promotion-overrides.json"
+      - "migration/supabase-history-alignment.json"
+      - "infrastructure/supabase/**"
+      - "tools/tests/test_supabase_default_privileges_contract.py"
+      - "tools/tests/test_supabase_history_alignment_contract.py"
+      - "docs/migration/**"
+      - "migration/workflow-candidates/**"
+      - "apps/**"
+      - "engines/**"
+      - "science/**"
+      - "tools/verify_source_snapshots.py"
+      - "tools/validate_find_displacements_workflow_candidates.py"
+      - "tools/audit_source_reference_pins.py"
+      - "tools/audit_workflow_contracts.py"
+      - "tools/validate_workflow_candidates.py"
+      - "tools/validate_known_place_workflows.py"
+      - "tools/validate_known_place_workflow_contract.py"
+      - ".github/workflows/**"
+      - "docs/submission/**"
+      - "README.md"
+      - "migration/workflow-candidates/**"
+      - ".github/workflows/snapshot-regression-tests.yml"
+  pull_request:
+    paths:
+      - "migration/source-snapshots/**"
+      - "migration/workflow-dispositions.json"
+      - "migration/active-runtime-scope.json"
+      - "migration/active-runtime-pins/**"
+      - "tools/validate_active_runtime_scope.py"
+      - "tools/validate_workflow_dispositions.py"
+      - "tools/validate_sarguardian_live_validation_workflow.py"
+      - "migration/source-branch-snapshots/**"
+      - ".github/workflows/know-place-aoi-analysis.yml"
+      - ".github/workflows/know-place-aoi-dispatcher.yml"
+      - "migration/promotion-overrides.json"
+      - "docs/migration/**"
+      - "apps/**"
+      - "engines/**"
+      - "science/**"
+      - "tools/verify_source_snapshots.py"
+      - "tools/audit_workflow_contracts.py"
+      - "tools/validate_workflow_candidates.py"
+      - "tools/validate_known_place_workflows.py"
+      - "tools/validate_known_place_workflow_contract.py"
+      - ".github/workflows/**"
+      - "docs/submission/**"
+      - "README.md"
+      - "migration/workflow-candidates/**"
+      - ".github/workflows/snapshot-regression-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snapshot-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-contract-audit:
+    name: Inventory all source workflow security and data contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check "PyYAML==6.0.3"
+      - name: Audit source workflow definitions
+        run: |
+          python tools/audit_workflow_contracts.py "$RUNNER_TEMP/workflow-contract-audit.json"
+          test -s "$RUNNER_TEMP/workflow-contract-audit.json"
+      - name: Validate every source workflow has an explicit Monorepo disposition
+        run: python tools/validate_workflow_dispositions.py
+      - name: Validate fixed P05023 live-retention workflow contract
+        run: python tools/validate_sarguardian_live_validation_workflow.py
+      - name: Validate evidence-based active runtime call graph
+        run: python tools/validate_active_runtime_scope.py
+      - name: Validate inactive RiverShift Monorepo workflow candidate
+        run: python tools/validate_workflow_candidates.py
+      - name: Validate Known Place API, manual dispatcher and reusable workflow contract
+        run: python tools/validate_known_place_workflows.py
+      - name: Validate API input mapping, request correlation and scoped dispatcher secrets
+        run: python tools/validate_known_place_workflow_contract.py
+      - name: Validate Monorepo Find Displacements manual dispatcher and local engine contract
+        run: python tools/validate_monorepo_find_displacements_dispatcher.py
+      - name: Parse archived RiverShift validation workflows without activating them
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import yaml
+
+          archive_paths = (
+              Path("migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/.github/workflows/river-shift-opera-dswx-s1-retained-replay.yml"),
+              Path("migration/source-branch-snapshots/backend-rivershift-run36-replay-f161088/.github/workflows/river-shift-run36-retrospective-replay.yml"),
+          )
+          active_root = Path(".github/workflows")
+          for path in archive_paths:
+              raw = path.read_text(encoding="utf-8")
+              document = yaml.safe_load(raw)
+              if not isinstance(document, dict) or not isinstance(document.get("jobs"), dict):
+                  raise SystemExit(f"Archived workflow is not a valid job map: {path}")
+              if "workflow_dispatch:" not in raw:
+                  raise SystemExit(f"Archived validation workflow lost its manual trigger: {path}")
+              active_path = active_root / path.name
+              if active_path.exists():
+                  active_raw = active_path.read_text(encoding="utf-8")
+                  active_document = yaml.safe_load(active_raw)
+                  if not isinstance(active_document, dict) or not isinstance(active_document.get("jobs"), dict):
+                      raise SystemExit(f"Promoted root workflow is not a valid job map: {active_path}")
+                  if active_raw == raw:
+                      raise SystemExit(f"Root workflow is a byte-identical archived source copy: {path.name}")
+                  if (
+                      "workflow_dispatch:" not in active_raw
+                      or re.search(r"(?m)^\s*push\s*:", active_raw)
+                      or "MONOREPO_RIVERSHIFT_" not in active_raw
+                      or '!= "true"' not in active_raw
+                  ):
+                      raise SystemExit(f"Promoted RiverShift root port is not manual-only and fail-closed: {path.name}")
+                  print(f"ARCHIVED_SOURCE_PRESERVED_SEPARATE_GATED_ROOT_PORT_PASS {path.name}")
+              else:
+                  print(f"ARCHIVED_WORKFLOW_YAML_PASS_NO_ROOT_PORT {path}")
+          PY
+
+  snapshot-integrity:
+    name: Exact Git blob and source-history integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Compare every imported source path and Git blob
+        run: python tools/verify_source_snapshots.py
+
+  source-pin-discovery:
+    name: Discover embedded source revision pins
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Scan imported text sources for 40-character revisions
+        run: python tools/audit_source_reference_pins.py
+
+  promoted-dynamic-frontend:
+    name: Promoted apps/web build, lint and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+
+  promoted-dynamic-api:
+    name: Promoted apps/api regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Install API test dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-test.txt
+      - name: Test Google Maps dashboard adapter contract
+        run: node tests/google_maps_dashboard_adapter.test.mjs
+      - name: Run Monorepo-only API owner-scope contract
+        run: python -m pytest ../../tools/tests/test_api_owner_scoping_contract.py -q
+      - name: Validate Supabase future-object privilege migration
+        run: python -m pytest ../../tools/tests/test_supabase_default_privileges_contract.py -q
+      - name: Validate Monorepo Supabase migration-history filename alignment
+        run: python -m pytest ../../tools/tests/test_supabase_history_alignment_contract.py -q
+      - name: Run active API regression suite
+        run: python -m pytest -q
+
+  promoted-find-displacements:
+    name: Promoted Find Displacements engine regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: engines/find-displacements
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            engines/find-displacements/requirements-dev.txt
+            engines/find-displacements/tools/requirements-retention.txt
+      - name: Install Find Displacements engine test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -r tools/requirements-retention.txt
+          python -m pip install --disable-pip-version-check "scipy>=1.13,<2" matplotlib pyproj shapely pillow pyyaml
+      - name: Compile Find Displacements modules
+        run: python -m compileall -q tools dashboard
+      - name: Run dashboard and worker-tools regression tests
+        run: python -m pytest -q dashboard/tests tools/tests
+      - name: Verify Monorepo root Find Displacements workflow paths
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_find_workflow_contract.py"
+      - name: Run retained-artifact reassembly workflow contract test
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_find_displacements_reassembly_contract.py"
+      - name: Run source-AOI streaming and local product-worker workflow contract tests
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_source_aoi_streaming_contract.py"
+      - name: Run one-granule retention pilot workflow contract test
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_find_displacements_retention_pilot_contract.py"
+      - name: Run Earthdata authentication and token probe workflow contract tests
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_earthdata_diagnostics_contract.py"
+
+  promoted-known-place:
+    name: Promoted Known Place engine regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: engines/known-place
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            engines/known-place/requirements-dev.txt
+            engines/known-place/tools/requirements-retention.txt
+      - name: Install Known Place regression dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -r tools/requirements-retention.txt
+          python -m pip install --disable-pip-version-check "scipy>=1.13,<2" matplotlib pyproj shapely pillow pyyaml
+      - name: Compile Known Place implementation
+        run: python -m compileall -q tools/know_place
+      - name: Run Known Place analysis and two-polygon regression tests
+        env:
+          PYTHONPATH: tools
+        run: python -m pytest -q tools/tests/test_know_place_*.py
+
+  promoted-river-shift:
+    name: Promoted RiverShift GCOV engine regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: engines/river-shift
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned RiverShift geospatial environment
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
+        with:
+          environment-file: engines/river-shift/tools/river_shift/environment.yml
+          cache-environment: true
+          generate-run-shell: true
+      - name: Compile RiverShift worker modules
+        shell: micromamba-shell {0}
+        run: |
+          python --version
+          python -m compileall -q tools/river_shift
+          python -m py_compile tools/river_shift/verify_monorepo_source_run.py tools/river_shift/replay_retained_run36_monorepo.py
+          echo "PROMOTED_RIVERSHIFT_COMPILE_PASS"
+      - name: Install PyYAML for retained-workflow contract tests
+        shell: micromamba-shell {0}
+        run: python -m pip install --disable-pip-version-check "PyYAML>=6,<7"
+      - name: Run RiverShift unit and workflow-contract tests
+        shell: micromamba-shell {0}
+        env:
+          PYTHONPATH: ${{ github.workspace }}/engines/river-shift/tools/river_shift
+        run: python -m pytest -q tools/river_shift/tests "$GITHUB_WORKSPACE/tools/tests/test_monorepo_rivershift_workflow_contract.py" "$GITHUB_WORKSPACE/tools/tests/test_monorepo_rivershift_retained_replay_contract.py"
+      - name: Run archived OPERA DSWx-S1 and RTC-S1 regression suite against promoted engine
+        shell: micromamba-shell {0}
+        env:
+          PYTHONPATH: ${{ github.workspace }}/engines/river-shift/tools/river_shift:${{ github.workspace }}/migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/tools/river_shift
+        run: |
+          python -m compileall -q "$GITHUB_WORKSPACE/migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/tools/river_shift"
+          python -m pytest -q "$GITHUB_WORKSPACE/migration/source-branch-snapshots/backend-rivershift-opera-rtc-fallback-092f602/tools/river_shift/tests/test_opera_dswx_s1_reference.py"
+          echo "RIVERSHIFT_ARCHIVED_OPERA_REGRESSION_PASS"
+      - name: Import-check archived Run #36 replay against promoted engine without raw-data access
+        shell: micromamba-shell {0}
+        env:
+          PYTHONPATH: ${{ github.workspace }}/engines/river-shift/tools/river_shift
+          RUN36_REPLAY_SCRIPT: ${{ github.workspace }}/migration/source-branch-snapshots/backend-rivershift-run36-replay-f161088/tools/river_shift/replay_retained_run36.py
+        run: |
+          python -m py_compile "$RUN36_REPLAY_SCRIPT"
+          python - <<'PY'
+          import importlib.util
+          import os
+          from pathlib import Path
+
+          source = Path(os.environ["RUN36_REPLAY_SCRIPT"])
+          spec = importlib.util.spec_from_file_location("archived_run36_replay", source)
+          if spec is None or spec.loader is None:
+              raise SystemExit("Could not create an import specification for the archived Run #36 replay.")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          from process_gcov_job import create_web_previews
+          from river_shift.flood import run_flood_analysis
+          from river_shift.morphology import run_morphology_analysis
+          from river_shift.overlap_audit import audit_candidate_mask_overlap
+          from river_shift.raster_io import sha256_file
+
+          required = (
+              module.replay,
+              create_web_previews,
+              run_flood_analysis,
+              run_morphology_analysis,
+              audit_candidate_mask_overlap,
+              sha256_file,
+          )
+          if not all(callable(item) for item in required):
+              raise SystemExit("The archived Run #36 replay is incompatible with the promoted RiverShift modules.")
+          print("RIVERSHIFT_RUN36_REPLAY_IMPORT_COMPATIBILITY_PASS")
+          PY
+
+  nisar-workflow-contracts:
+    name: NISAR catalogue diagnostic workflow contract tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check "PyYAML>=6,<7" "pytest>=8,<10"
+      - name: Validate NISAR catalogue-only diagnostics
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_nisar_discovery_workflow_contract.py"
+      - name: Validate exact-pin GUNW download/read feasibility workflows
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_nisar_gunw_product_workflow_contract.py"
+      - name: Validate GUNW and GOFF time-series workflow contracts
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_nisar_timeseries_workflow_contract.py"
+      - name: Validate single and multi-granule storage workflow contracts
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_nisar_storage_workflow_contract.py"
+  dashboard-assets-workflow-contracts:
+    name: Dashboard offline asset workflow contract tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - name: Install contract-test dependencies
+        run: python -m pip install --disable-pip-version-check "PyYAML>=6,<7" "pytest>=8,<10"
+      - name: Validate offline dashboard asset workflow
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_dashboard_assets_workflow_contract.py"
+      - name: Validate retained-dashboard artifact smoke contract
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_dashboard_real_artifact_smoke_contract.py"
+      - name: Validate Monorepo extended-science workflow contract
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_extended_science_workflow_contract.py"
+
+
+  promoted-nisar-science:
+    name: Promoted NISAR science regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: science/nisar-core
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: science/nisar-core/requirements.txt
+      - name: Install pinned NISAR science dependencies
+        run: python -m pip install --disable-pip-version-check --retries 5 --timeout 45 -r requirements.txt
+      - name: Run NISAR science regression suite
+        run: python -m pytest tests/ -q
+
+  workflow-dependency-audit:
+    name: Parse all source workflows and verify dependency graph
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check "PyYAML>=6,<7"
+      - name: Parse Dynamic, backend-main, and Known Place PR #85 workflows
+        run: python tools/audit_workflow_dependencies.py
+
+  find-displacements-workflow-candidate:
+    name: Validate inactive Find Displacements workflow candidates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check "PyYAML>=6,<7"
+      - name: Validate exact source mapping, API input contract and worker graph
+        run: python tools/validate_find_displacements_workflow_candidates.py
+
+  dynamic-frontend:
+    name: Dynamic frontend build, lint and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: migration/source-snapshots/dynamic/Frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: migration/source-snapshots/dynamic/Frontend/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+
+  dynamic-api:
+    name: Dynamic active API tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: migration/source-snapshots/dynamic/Backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: migration/source-snapshots/dynamic/Backend/requirements-test.txt
+      - name: Install API test dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-test.txt
+      - name: Test Google Maps dashboard adapter contract
+        run: node tests/google_maps_dashboard_adapter.test.mjs
+      - name: Run active API regression suite
+        run: python -m pytest -q
+
+  backend-core:
+    name: Backend worker, Find Displacements and dashboard tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: migration/source-snapshots/backend-main
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            migration/source-snapshots/backend-main/requirements-dev.txt
+            migration/source-snapshots/backend-main/tools/requirements-retention.txt
+      - name: Install isolated backend test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -r tools/requirements-retention.txt
+          python -m pip install --disable-pip-version-check "scipy>=1.13,<2" matplotlib pyproj shapely pillow pyyaml
+      - name: Compile worker and dashboard modules
+        run: python -m compileall -q tools dashboard
+      - name: Run backend and Find Displacements regression tests
+        run: python -m pytest -q tests dashboard/tests tools/tests
+
+  known-place:
+    name: Known Place PR #85 regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: migration/source-snapshots/backend-known-place-pr85
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            migration/source-snapshots/backend-known-place-pr85/requirements-dev.txt
+            migration/source-snapshots/backend-known-place-pr85/tools/requirements-retention.txt
+      - name: Install Known Place regression dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -r tools/requirements-retention.txt
+          python -m pip install --disable-pip-version-check "scipy>=1.13,<2" matplotlib pyproj shapely pillow pyyaml
+      - name: Compile Known Place implementation
+        run: python -m compileall -q tools/know_place
+      - name: Run Known Place analysis and two-polygon regression tests
+        env:
+          PYTHONPATH: tools
+        run: |
+          python -m pytest -q tools/tests/test_know_place_*.py
+      - name: Validate Monorepo synthetic map browser workflow contract
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_known_place_synthetic_map_browser_contract.py"
+      - name: Validate Monorepo DEM source acquisition workflow contract
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_known_place_dem_acquisition_contract.py"
+      - name: Validate Monorepo displacement-null audit workflow contract
+        run: python -m pytest -q "$GITHUB_WORKSPACE/tools/tests/test_monorepo_known_place_displacement_null_audit_contract.py"
+
+  river-shift:
+    name: RiverShift GCOV worker regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: migration/source-snapshots/backend-main
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned RiverShift geospatial environment
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
+        with:
+          environment-file: migration/source-snapshots/backend-main/tools/river_shift/environment.yml
+          cache-environment: true
+          generate-run-shell: true
+      - name: Compile RiverShift worker modules
+        shell: micromamba-shell {0}
+        run: |
+          python --version
+          python -m compileall -q tools/river_shift
+          echo "RIVERSHIFT_COMPILE_PASS"
+      - name: Run isolated RiverShift unit and workflow-contract tests
+        shell: micromamba-shell {0}
+        env:
+          PYTHONPATH: ${{ github.workspace }}/migration/source-snapshots/backend-main/tools/river_shift
+        run: python -m pytest -q tools/river_shift/tests
+
+  nisar-science:
+    name: NISAR science pinned regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: migration/source-snapshots/nisar-science
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: migration/source-snapshots/nisar-science/requirements.txt
+      - name: Install exact science dependencies
+        run: python -m pip install --disable-pip-version-check --retries 5 --timeout 45 -r requirements.txt
+      - name: Run complete science regression suite
+        run: python -m pytest tests/ -q

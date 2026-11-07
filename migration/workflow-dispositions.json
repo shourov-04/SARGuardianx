@@ -1,0 +1,1098 @@
+{
+  "schema_version": 1,
+  "audited_at": "2026-11-06",
+  "monorepo_repository": "moshiour0/SARGuardian-Monorepo",
+  "monorepo_branch": "migration/source-snapshot-import",
+  "monorepo_base_head": "3420eaea6b3d97175c075d4eb4da00423d89c176",
+  "expected_root_workflow_count": 42,
+  "sources": [
+    {
+      "id": "dynamic-main",
+      "repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "snapshot_workflow_directory": "migration/source-snapshots/dynamic/.github/workflows",
+      "expected_workflow_count": 7
+    },
+    {
+      "id": "backend-main",
+      "repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "snapshot_workflow_directory": "migration/source-snapshots/backend-main/.github/workflows",
+      "expected_workflow_count": 35
+    },
+    {
+      "id": "backend-known-place-pr85",
+      "repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "snapshot_workflow_directory": "migration/source-snapshots/backend-known-place-pr85/.github/workflows",
+      "expected_workflow_count": 40
+    }
+  ],
+  "workflow_instances": [
+    {
+      "source_id": "dynamic-main",
+      "source_repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "source_snapshot_path": "migration/source-snapshots/dynamic/.github/workflows/backend-tests.yml",
+      "source_blob_sha": "1d20d3021976853b98c735f2629f16aac2d1dc98",
+      "workflow_name": "backend-tests.yml",
+      "disposition": "ci-consolidated-parity-review",
+      "root_workflows": [
+        ".github/workflows/snapshot-regression-tests.yml"
+      ],
+      "note": "Promoted Dynamic API suite runs in the root Snapshot Regression workflow. Verify every Dynamic backend test file and dependency is included in promoted-dynamic-api."
+    },
+    {
+      "source_id": "dynamic-main",
+      "source_repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "source_snapshot_path": "migration/source-snapshots/dynamic/.github/workflows/frontend-tests.yml",
+      "source_blob_sha": "de7ad2eb1caf5a5cb7dd326a0133cc7ebef2871d",
+      "workflow_name": "frontend-tests.yml",
+      "disposition": "ci-consolidated-parity-review",
+      "root_workflows": [
+        ".github/workflows/snapshot-regression-tests.yml"
+      ],
+      "note": "Promoted Web test/build/lint suite runs in the root Snapshot Regression workflow. Verify the source frontend job's exact test and path-filter coverage."
+    },
+    {
+      "source_id": "dynamic-main",
+      "source_repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "source_snapshot_path": "migration/source-snapshots/dynamic/.github/workflows/known-place-analysis.yml",
+      "source_blob_sha": "2fec69265f9b5c18d11034959850034233e66672",
+      "workflow_name": "known-place-analysis.yml",
+      "disposition": "renamed-root-port-contract-review",
+      "root_workflows": [
+        ".github/workflows/know-place-aoi-dispatcher.yml",
+        ".github/workflows/know-place-aoi-analysis.yml"
+      ],
+      "note": "Dynamic Known Place caller is represented by the Monorepo dispatcher plus local reusable engine. Verify payload and callback schema; keep generic two-polygon AOI separate from author-exact P05023."
+    },
+    {
+      "source_id": "dynamic-main",
+      "source_repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "source_snapshot_path": "migration/source-snapshots/dynamic/.github/workflows/known-place-paper-reproduction.yml",
+      "source_blob_sha": "bfdec667a61820afbc5edb195658e5046c4ef603",
+      "workflow_name": "known-place-paper-reproduction.yml",
+      "disposition": "renamed-root-port-contract-review",
+      "root_workflows": [
+        ".github/workflows/know-place-paper-reproduction-dispatcher.yml",
+        ".github/workflows/know-place-author-exact-replay.yml"
+      ],
+      "note": "Dynamic author-exact caller maps to its separate Monorepo dispatcher/reusable workflow. Preserve explicit consent and exact P05023 historical pins."
+    },
+    {
+      "source_id": "dynamic-main",
+      "source_repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "source_snapshot_path": "migration/source-snapshots/dynamic/.github/workflows/sarguardian-aoi-product-worker.yml",
+      "source_blob_sha": "656d105a9b1543f7fac20db199babb81cba844a7",
+      "workflow_name": "sarguardian-aoi-product-worker.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-product-worker.yml"
+      ],
+      "note": "Root reusable AOI worker exists; compare the Dynamic worker's source checkout, environment variables, artifact and cleanup contracts against Backend and PR #85 variants."
+    },
+    {
+      "source_id": "dynamic-main",
+      "source_repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "source_snapshot_path": "migration/source-snapshots/dynamic/.github/workflows/sarguardian-aoi-wkt-dashboard.yml",
+      "source_blob_sha": "ed74c64295de18dd6310a43f323baca4d6923f34",
+      "workflow_name": "sarguardian-aoi-wkt-dashboard.yml",
+      "disposition": "renamed-root-port-contract-review",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-wkt-dashboard.yml",
+        ".github/workflows/sarguardian-aoi-dashboard-engine.yml"
+      ],
+      "note": "Root has a workflow_dispatch API-facing wrapper and local workflow_call engine. Dynamic and Backend dashboard inputs are not interchangeable; verify exact caller/callee and terminal callback semantics."
+    },
+    {
+      "source_id": "dynamic-main",
+      "source_repository": "moshiour0/SARGuardian_Dynamic",
+      "source_ref": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "source_snapshot_path": "migration/source-snapshots/dynamic/.github/workflows/sarguardian-displacement.yml",
+      "source_blob_sha": "eb6f8fd76fd941c384438c7fa18cd62ce2ca6714",
+      "workflow_name": "sarguardian-displacement.yml",
+      "disposition": "api-dispatch-replacement-contract-review",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-wkt-dispatcher.yml",
+        ".github/workflows/sarguardian-aoi-wkt-dashboard.yml"
+      ],
+      "note": "Legacy Dynamic dispatcher wrapper is represented by the Monorepo API adapter plus manual dispatcher/API-facing workflow. Its product_type/acquisition_window/retention_mode/processing_profile schema differs from the Backend dashboard schema; do not wire it as a direct replacement without tests."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/dashboard-assets-test.yml",
+      "source_blob_sha": "75926ca204fd4f8e8fb327ddd8f5ce719e9e0720",
+      "workflow_name": "dashboard-assets-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/dashboard-assets-test.yml"
+      ],
+      "note": "Root CI file exists with adapted content; compare asset paths, generated-output checks and branch/path filters."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/dashboard-real-artifact-smoke.yml",
+      "source_blob_sha": "9179d9b58adbd36f01771b700f8a957d7c3402d9",
+      "workflow_name": "dashboard-real-artifact-smoke.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/dashboard-real-artifact-smoke.yml"
+      ],
+      "note": "Root smoke exists; verify same-repository Preview run guard, exact run-attempt artifact identity, and no raw HDF5 replay."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/earthdata-auth-test.yml",
+      "source_blob_sha": "0d6001ebb9e454cd8da641d646c5401c9608a0cc",
+      "workflow_name": "earthdata-auth-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/earthdata-auth-test.yml"
+      ],
+      "note": "Root manual auth test exists; verify secret names, token handling and redacted logs."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/earthdata-token-smoke-test.yml",
+      "source_blob_sha": "23f8fea2706bee7326b2878504d76c819cf4825c",
+      "workflow_name": "earthdata-token-smoke-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/earthdata-token-smoke-test.yml"
+      ],
+      "note": "Root manual token smoke exists; verify pinned science source and least-scope Earthdata credentials."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/know-place-aoi-dispatcher.yml",
+      "source_blob_sha": "90b254a68dae6c8449edeacf4ea205743ee89380",
+      "workflow_name": "know-place-aoi-dispatcher.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/know-place-aoi-dispatcher.yml"
+      ],
+      "note": "Root Known Place dispatcher exists with fail-closed preflight; verify original six worker-secret and request/callback contract."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/know-place-paper-reproduction-dispatcher.yml",
+      "source_blob_sha": "42216b46f0b4b842c079dc25eccd015efa9ffbb5",
+      "workflow_name": "know-place-paper-reproduction-dispatcher.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/know-place-paper-reproduction-dispatcher.yml"
+      ],
+      "note": "Root author-exact dispatcher exists; preserve P05023, P05023 product identity, exact historical code/science pins and explicit consent."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-discovery-test.yml",
+      "source_blob_sha": "fd5405888c26832405952fb5457bf9f88b4ee89f",
+      "workflow_name": "nisar-discovery-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-discovery-test.yml"
+      ],
+      "note": "Root manual discovery test exists; verify catalogue query and no hidden download side effects."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-goff-timeseries-test.yml",
+      "source_blob_sha": "e2fb0400ef4262285679c646231cb89fca91ba93",
+      "workflow_name": "nisar-goff-timeseries-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-goff-timeseries-test.yml"
+      ],
+      "note": "Root manual GOFF test exists; preserve GOFF-only semantics and exact historical science checkout provenance."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-gunw-earthaccess-discovery-test.yml",
+      "source_blob_sha": "3a4cac2e9a72c9a866591cce62dea48f2aa97fb0",
+      "workflow_name": "nisar-gunw-earthaccess-discovery-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-earthaccess-discovery-test.yml"
+      ],
+      "note": "Root manual GUNW discovery test exists; compare Earthaccess/catalogue contract and old science source pin."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-gunw-earthaccess-read-test.yml",
+      "source_blob_sha": "8c9d879aad01668ff9e6f73e73e0e3542f171442",
+      "workflow_name": "nisar-gunw-earthaccess-read-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-earthaccess-read-test.yml"
+      ],
+      "note": "Root manual GUNW read test exists; verify remote read behavior and credential handling."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-gunw-science-test.yml",
+      "source_blob_sha": "3de36c147846d7b4b7d1eb33c8c8a6e8ac3af1bd",
+      "workflow_name": "nisar-gunw-science-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-science-test.yml"
+      ],
+      "note": "Root manual GUNW science test exists; ensure tests remain tied to the intended historical science revision."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-gunw-timeseries-test.yml",
+      "source_blob_sha": "63ecf84b34983d8d0a8af3e32cf20bd5ff218440",
+      "workflow_name": "nisar-gunw-timeseries-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-timeseries-test.yml"
+      ],
+      "note": "Root manual GUNW time-series test exists; verify three-acquisition/time-series constraints and no GOFF blending."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-multi-granule-storage-test.yml",
+      "source_blob_sha": "4e9ea77e0c374fae7b92325f41e859de805c8a0f",
+      "workflow_name": "nisar-multi-granule-storage-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-multi-granule-storage-test.yml"
+      ],
+      "note": "Root storage test exists but is separately gated; verify the 15-GB storage experiment is opt-in and never part of routine CI."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/nisar-single-download-test.yml",
+      "source_blob_sha": "cfb86b48e127e1f52a400783287d3bc47b97c0ad",
+      "workflow_name": "nisar-single-download-test.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-single-download-test.yml"
+      ],
+      "note": "Root single-download test exists; verify manual trigger, bounded download and no Drive writes unless explicitly required."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/retention-archive-tests.yml",
+      "source_blob_sha": "3a81ad4c8adcf7dbb192ec44592a5eec355cc686",
+      "workflow_name": "retention-archive-tests.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/retention-archive-tests.yml"
+      ],
+      "note": "Root CI workflow now builds an isolated fixture tree from the exact Backend-main source snapshot and runs test_hdf5_archive, test_pipeline_helpers, test_time_window and test_aggregate_streamed_outputs. It has no credentials or live download/Drive steps. CI must pass on the current commit before this disposition is closed."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/river-shift-gcov-process.yml",
+      "source_blob_sha": "1720bc68ffb286d22caf48e94433301c8053a1a3",
+      "workflow_name": "river-shift-gcov-process.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/river-shift-gcov-process.yml"
+      ],
+      "note": "Root GCOV workflow exists with one fail-closed preflight around the 20-job source graph; static tests pass but real GCOV, Drive receipt and signed callback round-trip remain unverified."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/river-shift-independent-reference-validation.yml",
+      "source_blob_sha": "adc1fd557885f4274cef29dc06a67d18ffe60903",
+      "workflow_name": "river-shift-independent-reference-validation.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/river-shift-independent-reference-validation.yml"
+      ],
+      "note": "Root independent-reference workflow exists and remains separate from GCOV processing; verify provenance and manual-only trigger."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/river-shift-opera-dswx-s1-retained-replay.yml",
+      "source_blob_sha": "4615e2f4ae82a7bcc51ba58d66a76abb7d2e0e5e",
+      "workflow_name": "river-shift-opera-dswx-s1-retained-replay.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/river-shift-opera-dswx-s1-retained-replay.yml"
+      ],
+      "note": "Root retained replay exists; original push trigger must remain removed, manual-only and evidence/fixture scoped."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/river-shift-run36-retrospective-replay.yml",
+      "source_blob_sha": "7e2e6449ff7d1e47f4a35fd550a3dca9a80d9cc5",
+      "workflow_name": "river-shift-run36-retrospective-replay.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/river-shift-run36-retrospective-replay.yml"
+      ],
+      "note": "Root Run #36 replay exists; original push trigger must remain removed and replay must use retained run identity."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/river-shift-sentinel2-retained-replay.yml",
+      "source_blob_sha": "79291b782a51fdd0e01e71a3376e516f4fd19a99",
+      "workflow_name": "river-shift-sentinel2-retained-replay.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/river-shift-sentinel2-retained-replay.yml"
+      ],
+      "note": "Root Sentinel-2 replay exists; original push trigger must remain removed and cross-sensor validation must stay separate from GCOV."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/river-shift-tests.yml",
+      "source_blob_sha": "d9f69946b85b0f65e8e2d1576ee4df756891f6d9",
+      "workflow_name": "river-shift-tests.yml",
+      "disposition": "ci-consolidated-parity-review",
+      "root_workflows": [
+        ".github/workflows/snapshot-regression-tests.yml"
+      ],
+      "note": "RiverShift worker tests are executed by the promoted-engine job in Snapshot Regression Tests. Verify the full source test contract, geospatial environment, GDAL driver checks and workflow-contract assertions remain equivalent."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/runner-test.yml",
+      "source_blob_sha": "afba718f35d35a9bdd5d483e054434e5e2e9c8e5",
+      "workflow_name": "runner-test.yml",
+      "disposition": "archive-confirmed-inactive",
+      "root_workflows": [],
+      "note": "Preserved byte-for-byte in the immutable source snapshot but intentionally not activated at the Monorepo root. This manual diagnostic creates a 5-GB temporary disk file and allocates about 4 GB RAM; it is not called by the product API or another workflow. The root runner-allocation diagnostic provides a low-impact allocation/shell smoke check. Keep the heavy benchmark archived unless a separately reviewed operator need justifies an explicitly gated manual run."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-aoi-code-validation.yml",
+      "source_blob_sha": "1bbff061aae409d27a5089cd13e380aac6079b86",
+      "workflow_name": "sarguardian-aoi-code-validation.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-code-validation.yml"
+      ],
+      "note": "A dedicated root CI port now validates both the exact 006d NISAR parser/GOFF source pin and the promoted Find Displacements tools/dashboard. It compiles the engine, checks generated JavaScript syntax, parses root AOI workflow YAML and runs the historical source plus promoted engine suites. The old Backend Run-32 artifact download from another repository is intentionally not reused; the Monorepo has a separate same-repository Dashboard Real Artifact Smoke workflow. Verify current-head CI and compare any remaining fixture differences before closure."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-aoi-live-discovery-check.yml",
+      "source_blob_sha": "30bbadd02b42d17cebf7e14be915ff32c8b29c42",
+      "workflow_name": "sarguardian-aoi-live-discovery-check.yml",
+      "disposition": "renamed-root-port-contract-review",
+      "root_workflows": [
+        ".github/workflows/find-displacements-live-catalogue-diagnostic.yml"
+      ],
+      "note": "Renamed to an isolated Find Displacements catalogue-only diagnostic. Verify WKT/date input contract, immutable science-source selection, ASF diagnostics and the new fail-closed gate; do not enable downloads or Drive writes."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-aoi-product-worker.yml",
+      "source_blob_sha": "15dc032db32a568dfb6acc5777b54332364d084b",
+      "workflow_name": "sarguardian-aoi-product-worker.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-product-worker.yml"
+      ],
+      "note": "Root reusable AOI product worker exists; compare required inputs, source pin, cleanup, artifact names and failure status semantics."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-aoi-wkt-dashboard.yml",
+      "source_blob_sha": "eabdc43e0e0b05fccd532647bbddde2216694e64",
+      "workflow_name": "sarguardian-aoi-wkt-dashboard.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-wkt-dashboard.yml"
+      ],
+      "note": "Root API-facing caller exists separately from the workflow_call engine; compare dispatch schema, callbacks, retries, artifact identity and terminal status."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-aoi-wkt-dispatcher.yml",
+      "source_blob_sha": "54298d915902884c5d65fdd41027c54864fba8ae",
+      "workflow_name": "sarguardian-aoi-wkt-dispatcher.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-wkt-dispatcher.yml"
+      ],
+      "note": "Root manual AOI dispatcher exists; it is not interchangeable with the API-facing dashboard workflow."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-extended-science.yml",
+      "source_blob_sha": "c615376a2b73ca0fa99a552b03fce212ff5f4288",
+      "workflow_name": "sarguardian-extended-science.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-extended-science.yml"
+      ],
+      "note": "Root extended-science workflow exists; verify its historical science pin, input/output contract and manual gate."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-live-validation.yml",
+      "source_blob_sha": "e5d73c5b7301ab3496bd99658a6914258c695a68",
+      "workflow_name": "sarguardian-live-validation.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-live-validation.yml"
+      ],
+      "note": "A separate Monorepo root workflow now retains the source workflow's two fixed P05023 products (one GUNW, one GOFF) as sequential matrix entries. It is manual-only and requires both MONOREPO_SARGUARDIAN_LIVE_VALIDATION_ENABLED=true and confirm_live_retention=true. It materializes the exact ab547 science commit from Monorepo Git history with git worktree, uses promoted Find Displacements retention tools, uploads engine-ready archive/provenance to Drive with receipt verification, and has no automatic raw-file deletion. Validate its structural contract and CI before considering the live gate."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-product-worker.yml",
+      "source_blob_sha": "8220ed86db68795af257263792fcef3ef224dec7",
+      "workflow_name": "sarguardian-product-worker.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-product-worker.yml"
+      ],
+      "note": "Root streaming reusable worker exists and remains distinct from the AOI product worker; compare inputs, outputs, retries and cleanup."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-reassemble-existing.yml",
+      "source_blob_sha": "f4cb4d5155688a9795db9531c1eb92ff69327e91",
+      "workflow_name": "sarguardian-reassemble-existing.yml",
+      "disposition": "renamed-root-port-contract-review",
+      "root_workflows": [
+        ".github/workflows/find-displacements-reassemble-existing.yml"
+      ],
+      "note": "Renamed/scoped as Find Displacements retained-artifact reassembly. Verify run-ID inputs, historical artifact names, six artifact classes, pinned science revision and Drive receipt parity."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-retention-ci.yml",
+      "source_blob_sha": "6e7e46fcbaa1fbd40f66c5868e4aad31e101f2c9",
+      "workflow_name": "sarguardian-retention-ci.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/backend-source-regression-tests.yml",
+        ".github/workflows/snapshot-regression-tests.yml"
+      ],
+      "note": "The Monorepo now runs the full immutable Backend-main source snapshot test suite (tools/ and tests/) in its own secret-free CI workflow. The workflow also compiles the entire source tree and parses the source retention workflow YAML. The source workflow's pinned-science regression job is covered separately by the root Snapshot Regression NISAR science job against the imported 9fcb main tree."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-retention-pilot.yml",
+      "source_blob_sha": "1e6f1b0d3c8318ca2a2de9a87e2256285f07d9d6",
+      "workflow_name": "sarguardian-retention-pilot.yml",
+      "disposition": "renamed-root-port-contract-review",
+      "root_workflows": [
+        ".github/workflows/find-displacements-retention-pilot.yml"
+      ],
+      "note": "Root pilot is engine-scoped and fail-closed. Verify all source inputs, one-granule constraint, science pin, no-delete invariant and Drive receipt handling."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-science-worker.yml",
+      "source_blob_sha": "a096ecc12f27f46c43258e5684f2e01926009097",
+      "workflow_name": "sarguardian-science-worker.yml",
+      "disposition": "archive-confirmed-inactive",
+      "root_workflows": [],
+      "note": "Preserved byte-for-byte in the legacy-fork and Backend workflow snapshots but intentionally not activated at the Monorepo root. The workflow checks out the distinct Sagormodak/SARGuardian@77cc9646... source, uses WORKER_CALLBACK_SECRET and RENDER_CALLBACK_URL, and invokes an older GOFF-only worker. The current Vercel apps/api dispatch adapter accepts only sarguardian-aoi-wkt-dashboard.yml or sarguardian-displacement.yml, not this legacy worker. Do not retarget its old callback to Vercel or substitute the current NISAR source without a separately reviewed migration."
+    },
+    {
+      "source_id": "backend-main",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "source_snapshot_path": "migration/source-snapshots/backend-main/.github/workflows/sarguardian-streaming-batch.yml",
+      "source_blob_sha": "0215889d14473fee64d5343972612b8993dc2a8b",
+      "workflow_name": "sarguardian-streaming-batch.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-streaming-batch.yml"
+      ],
+      "note": "Root streaming batch exists; verify manifest, 15-at-a-time batching where applicable, failed-only retries, preassembly checks and final failure propagation."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/dashboard-assets-test.yml",
+      "source_blob_sha": "591e8568e6f09a4338360dc3b4e028320bab317e",
+      "workflow_name": "dashboard-assets-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/dashboard-assets-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root CI file exists with adapted content; compare asset paths, generated-output checks and branch/path filters."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/earthdata-auth-test.yml",
+      "source_blob_sha": "0d6001ebb9e454cd8da641d646c5401c9608a0cc",
+      "workflow_name": "earthdata-auth-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/earthdata-auth-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual auth test exists; verify secret names, token handling and redacted logs."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/earthdata-token-smoke-test.yml",
+      "source_blob_sha": "23f8fea2706bee7326b2878504d76c819cf4825c",
+      "workflow_name": "earthdata-token-smoke-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/earthdata-token-smoke-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual token smoke exists; verify pinned science source and least-scope Earthdata credentials."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-analysis-reanalysis.yml",
+      "source_blob_sha": "9d0f1fb81be95d2e34ced88e9c7e1b8c20197d03",
+      "workflow_name": "know-place-analysis-reanalysis.yml",
+      "disposition": "manual-research-port-required",
+      "root_workflows": [],
+      "note": "Separate credentialed reanalysis workflow. Preserve only after confirming whether a distinct reanalysis capability is still needed; if promoted, remove automatic push execution and require explicit run consent."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-analysis-run.yml",
+      "source_blob_sha": "2cc394e91126b6487abf50d974614d95aa9ee427",
+      "workflow_name": "know-place-analysis-run.yml",
+      "disposition": "author-exact-research-disposition-required",
+      "root_workflows": [],
+      "note": "Fixed five-pair research runner with a pinned NISAR source and push trigger. Keep as immutable evidence until exact author consent and the benchmark's current role are resolved; never activate the source push trigger."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-analysis-validation.yml",
+      "source_blob_sha": "c2b2888bc1c87c2a78936345c76242a69bc817ff",
+      "workflow_name": "know-place-analysis-validation.yml",
+      "disposition": "split-ci-live-contract-review",
+      "root_workflows": [
+        ".github/workflows/snapshot-regression-tests.yml"
+      ],
+      "note": "Contains pure-kernel tests plus live ASF catalogue contract. Keep deterministic tests in CI and move live ASF checks to a separately gated manual workflow; current engine tests alone do not prove the live half."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-aoi-analysis.yml",
+      "source_blob_sha": "deb45457be51fa7921a7a4967ba6d97b5be15a68",
+      "workflow_name": "know-place-aoi-analysis.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/know-place-aoi-analysis.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root counterpart exists with adapted content; verify original trigger, inputs/outputs, source pins, secrets, callbacks, artifacts, retries and failure semantics."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-author-dashboard.yml",
+      "source_blob_sha": "fe3dbec37caf45887a3162ef5e5e17fdff84ae46",
+      "workflow_name": "know-place-author-dashboard.yml",
+      "disposition": "manual-renderer-port-required",
+      "root_workflows": [],
+      "note": "Separate retained-artifact dashboard renderer. Review artifact identity and source ownership; keep independent from raw acquisition and generic AOI analysis."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-author-exact-consent-bridge.yml",
+      "source_blob_sha": "c6e0cc8c72d658eaaacde3b80df8fb34606311b9",
+      "workflow_name": "know-place-author-exact-consent-bridge.yml",
+      "disposition": "archive-inactive-consent-bridge",
+      "root_workflows": [],
+      "note": "Push-triggered author-exact consent bridge. Preserve in the immutable snapshot; do not promote an automatic push trigger. Rebuild only as a manual consent-gated bridge if a real caller still requires it."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-author-exact-replay.yml",
+      "source_blob_sha": "0b425fd118ca39aefbf9f61c7eb8efcb9d313f75",
+      "workflow_name": "know-place-author-exact-replay.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/know-place-author-exact-replay.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root counterpart exists with adapted content; verify original trigger, inputs/outputs, source pins, secrets, callbacks, artifacts, retries and failure semantics."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-author-map-render.yml",
+      "source_blob_sha": "c40c001b791a32101bf5b4acbc2a9692d8705d14",
+      "workflow_name": "know-place-author-map-render.yml",
+      "disposition": "manual-renderer-port-required",
+      "root_workflows": [],
+      "note": "Push-triggered author map renderer. Preserve source; decide whether root author-dashboard renderer replaces it. Do not promote the source push trigger."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-dem-source-acquisition.yml",
+      "source_blob_sha": "c2cb89429b901ec4ba6bf1ccf033c1a8c5d1bc57",
+      "workflow_name": "know-place-dem-source-acquisition.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/know-place-dem-source-acquisition.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root counterpart exists with adapted content; verify original trigger, inputs/outputs, source pins, secrets, callbacks, artifacts, retries and failure semantics."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-displacement-null-audit.yml",
+      "source_blob_sha": "e7b4fc1cd097b7852426a0876a34725c8659cd1b",
+      "workflow_name": "know-place-displacement-null-audit.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/know-place-displacement-null-audit.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root counterpart exists with adapted content; verify original trigger, inputs/outputs, source pins, secrets, callbacks, artifacts, retries and failure semantics."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-generic-aoi-consent-bridge.yml",
+      "source_blob_sha": "5b149a4e4267c15eefb7000b952030c473e8eb45",
+      "workflow_name": "know-place-generic-aoi-consent-bridge.yml",
+      "disposition": "archive-inactive-consent-bridge",
+      "root_workflows": [],
+      "note": "Push-triggered generic AOI consent bridge. Preserve exact source only; no automatic processing or Drive side effects on repository pushes."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-generic-aoi-drive-retry.yml",
+      "source_blob_sha": "7d9f281d1d9ceaff43fced193be0213cdac53765",
+      "workflow_name": "know-place-generic-aoi-drive-retry.yml",
+      "disposition": "drive-retry-port-review-required",
+      "root_workflows": [],
+      "note": "Credentialed derived-only Drive retry with a push trigger. Decide whether this capability is covered by the generic Known Place finalizer; if separately promoted, require manual consent, strict receipt identity and failed-only retry."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-generic-map-browser-smoke.yml",
+      "source_blob_sha": "e84367af84c8a07cc5e94fb2cfca1aa68bba46a4",
+      "workflow_name": "know-place-generic-map-browser-smoke.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/know-place-generic-map-browser-smoke.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root counterpart exists with adapted content; verify original trigger, inputs/outputs, source pins, secrets, callbacks, artifacts, retries and failure semantics."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-retained-crown-audit.yml",
+      "source_blob_sha": "c1ad0e3bb883872f7caf8bb8502dace371f1f24b",
+      "workflow_name": "know-place-retained-crown-audit.yml",
+      "disposition": "manual-research-port-required",
+      "root_workflows": [],
+      "note": "Retained-output audit. Preserve until artifact identity/retention rules and the intended operator workflow are confirmed."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/know-place-terrain-datum-sensitivity.yml",
+      "source_blob_sha": "256797411c41829e1aba57f5c1d484f4f5dd5307",
+      "workflow_name": "know-place-terrain-datum-sensitivity.yml",
+      "disposition": "manual-research-port-required",
+      "root_workflows": [],
+      "note": "Credentialed terrain/vertical-datum sensitivity research. Keep manual and separate from the standard Known Place result path."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-discovery-test.yml",
+      "source_blob_sha": "fd5405888c26832405952fb5457bf9f88b4ee89f",
+      "workflow_name": "nisar-discovery-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-discovery-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual discovery test exists; verify catalogue query and no hidden download side effects."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-goff-timeseries-test.yml",
+      "source_blob_sha": "e2fb0400ef4262285679c646231cb89fca91ba93",
+      "workflow_name": "nisar-goff-timeseries-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-goff-timeseries-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual GOFF test exists; preserve GOFF-only semantics and exact historical science checkout provenance."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-gunw-earthaccess-discovery-test.yml",
+      "source_blob_sha": "3a4cac2e9a72c9a866591cce62dea48f2aa97fb0",
+      "workflow_name": "nisar-gunw-earthaccess-discovery-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-earthaccess-discovery-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual GUNW discovery test exists; compare Earthaccess/catalogue contract and old science source pin."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-gunw-earthaccess-read-test.yml",
+      "source_blob_sha": "8c9d879aad01668ff9e6f73e73e0e3542f171442",
+      "workflow_name": "nisar-gunw-earthaccess-read-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-earthaccess-read-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual GUNW read test exists; verify remote read behavior and credential handling."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-gunw-science-test.yml",
+      "source_blob_sha": "3de36c147846d7b4b7d1eb33c8c8a6e8ac3af1bd",
+      "workflow_name": "nisar-gunw-science-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-science-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual GUNW science test exists; ensure tests remain tied to the intended historical science revision."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-gunw-timeseries-test.yml",
+      "source_blob_sha": "63ecf84b34983d8d0a8af3e32cf20bd5ff218440",
+      "workflow_name": "nisar-gunw-timeseries-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-gunw-timeseries-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual GUNW time-series test exists; verify three-acquisition/time-series constraints and no GOFF blending."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-multi-granule-storage-test.yml",
+      "source_blob_sha": "4e9ea77e0c374fae7b92325f41e859de805c8a0f",
+      "workflow_name": "nisar-multi-granule-storage-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-multi-granule-storage-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root storage test exists but is separately gated; verify the 15-GB storage experiment is opt-in and never part of routine CI."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/nisar-single-download-test.yml",
+      "source_blob_sha": "cfb86b48e127e1f52a400783287d3bc47b97c0ad",
+      "workflow_name": "nisar-single-download-test.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/nisar-single-download-test.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root single-download test exists; verify manual trigger, bounded download and no Drive writes unless explicitly required."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/retention-archive-tests.yml",
+      "source_blob_sha": "3a81ad4c8adcf7dbb192ec44592a5eec355cc686",
+      "workflow_name": "retention-archive-tests.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/retention-archive-tests.yml"
+      ],
+      "note": "The PR #85 source workflow is byte-identical to Backend main; it shares the new isolated root retention-archive regression port. Root CI workflow now builds an isolated fixture tree from the exact Backend-main source snapshot and runs test_hdf5_archive, test_pipeline_helpers, test_time_window and test_aggregate_streamed_outputs. It has no credentials or live download/Drive steps. CI must pass on the current commit before this disposition is closed."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/runner-test.yml",
+      "source_blob_sha": "afba718f35d35a9bdd5d483e054434e5e2e9c8e5",
+      "workflow_name": "runner-test.yml",
+      "disposition": "archive-confirmed-inactive",
+      "root_workflows": [],
+      "note": "Preserved byte-for-byte in the immutable source snapshot but intentionally not activated at the Monorepo root. This manual diagnostic creates a 5-GB temporary disk file and allocates about 4 GB RAM; it is not called by the product API or another workflow. The root runner-allocation diagnostic provides a low-impact allocation/shell smoke check. Keep the heavy benchmark archived unless a separately reviewed operator need justifies an explicitly gated manual run."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-aoi-code-validation.yml",
+      "source_blob_sha": "bc05df58d6533928856789e3c8e3767d0e0ee92a",
+      "workflow_name": "sarguardian-aoi-code-validation.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-code-validation.yml"
+      ],
+      "note": "The PR #85 variant uses the separate 10639 NISAR science pin and a different trigger/test set. The root CI port runs parser/GOFF-reader tests for both 006d and 10639, plus promoted tools/dashboard tests; the branch-specific test/trigger diff remains under review. Its old cross-repository Run-32 artifact smoke is replaced by the separate same-repository Dashboard Real Artifact Smoke workflow."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-aoi-live-discovery-check.yml",
+      "source_blob_sha": "30bbadd02b42d17cebf7e14be915ff32c8b29c42",
+      "workflow_name": "sarguardian-aoi-live-discovery-check.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/find-displacements-live-catalogue-diagnostic.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Renamed to an isolated Find Displacements catalogue-only diagnostic. Verify WKT/date input contract, immutable science-source selection, ASF diagnostics and the new fail-closed gate; do not enable downloads or Drive writes."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-aoi-product-worker.yml",
+      "source_blob_sha": "eb2baa483366f5bc906f22bed91f841bfe2b1832",
+      "workflow_name": "sarguardian-aoi-product-worker.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-product-worker.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root reusable AOI product worker exists; compare required inputs, source pin, cleanup, artifact names and failure status semantics."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-aoi-wkt-dashboard.yml",
+      "source_blob_sha": "595dff2527b05aed42e7b73b2bbe558580d7ae1e",
+      "workflow_name": "sarguardian-aoi-wkt-dashboard.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-wkt-dashboard.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root API-facing caller exists separately from the workflow_call engine; compare dispatch schema, callbacks, retries, artifact identity and terminal status."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-aoi-wkt-dispatcher.yml",
+      "source_blob_sha": "4b2549dbccf504aacd8aadd473955f845776226f",
+      "workflow_name": "sarguardian-aoi-wkt-dispatcher.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-aoi-wkt-dispatcher.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root manual AOI dispatcher exists; it is not interchangeable with the API-facing dashboard workflow."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-live-validation.yml",
+      "source_blob_sha": "e5d73c5b7301ab3496bd99658a6914258c695a68",
+      "workflow_name": "sarguardian-live-validation.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-live-validation.yml"
+      ],
+      "note": "This PR #85 workflow is byte-identical to Backend main and uses the same reviewed root port. A separate Monorepo root workflow now retains the source workflow's two fixed P05023 products (one GUNW, one GOFF) as sequential matrix entries. It is manual-only and requires both MONOREPO_SARGUARDIAN_LIVE_VALIDATION_ENABLED=true and confirm_live_retention=true. It materializes the exact ab547 science commit from Monorepo Git history with git worktree, uses promoted Find Displacements retention tools, uploads engine-ready archive/provenance to Drive with receipt verification, and has no automatic raw-file deletion. Validate its structural contract and CI before considering the live gate."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-product-worker.yml",
+      "source_blob_sha": "5dbc8259f29227a66b994dd82c959960545b859d",
+      "workflow_name": "sarguardian-product-worker.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-product-worker.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root streaming reusable worker exists and remains distinct from the AOI product worker; compare inputs, outputs, retries and cleanup."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-reassemble-existing.yml",
+      "source_blob_sha": "f4cb4d5155688a9795db9531c1eb92ff69327e91",
+      "workflow_name": "sarguardian-reassemble-existing.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/find-displacements-reassemble-existing.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Renamed/scoped as Find Displacements retained-artifact reassembly. Verify run-ID inputs, historical artifact names, six artifact classes, pinned science revision and Drive receipt parity."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-retention-ci.yml",
+      "source_blob_sha": "e02ca99b48a640a0636326aed3308ee6219120d8",
+      "workflow_name": "sarguardian-retention-ci.yml",
+      "disposition": "root-present-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/backend-source-regression-tests.yml",
+        ".github/workflows/snapshot-regression-tests.yml"
+      ],
+      "note": "The Monorepo runs the full immutable Known Place PR #85 source snapshot test suite in the same separate secret-free CI workflow, including the PR-specific tools/know_place/requirements.txt dependency. Its pinned-science regression is covered separately by the root Snapshot Regression NISAR science job against the imported 9fcb main tree."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-retention-pilot.yml",
+      "source_blob_sha": "1e6f1b0d3c8318ca2a2de9a87e2256285f07d9d6",
+      "workflow_name": "sarguardian-retention-pilot.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/find-displacements-retention-pilot.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root pilot is engine-scoped and fail-closed. Verify all source inputs, one-granule constraint, science pin, no-delete invariant and Drive receipt handling."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-science-worker.yml",
+      "source_blob_sha": "a096ecc12f27f46c43258e5684f2e01926009097",
+      "workflow_name": "sarguardian-science-worker.yml",
+      "disposition": "archive-confirmed-inactive",
+      "root_workflows": [],
+      "note": "Preserved byte-for-byte in the legacy-fork and Backend workflow snapshots but intentionally not activated at the Monorepo root. The workflow checks out the distinct Sagormodak/SARGuardian@77cc9646... source, uses WORKER_CALLBACK_SECRET and RENDER_CALLBACK_URL, and invokes an older GOFF-only worker. The current Vercel apps/api dispatch adapter accepts only sarguardian-aoi-wkt-dashboard.yml or sarguardian-displacement.yml, not this legacy worker. Do not retarget its old callback to Vercel or substitute the current NISAR source without a separately reviewed migration."
+    },
+    {
+      "source_id": "backend-known-place-pr85",
+      "source_repository": "moshiour0/SARGuardian-backend",
+      "source_ref": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "source_snapshot_path": "migration/source-snapshots/backend-known-place-pr85/.github/workflows/sarguardian-streaming-batch.yml",
+      "source_blob_sha": "9dfc42d715f506b20a8b8f2a174e8e421c0e3743",
+      "workflow_name": "sarguardian-streaming-batch.yml",
+      "disposition": "feature-variant-contract-review-required",
+      "root_workflows": [
+        ".github/workflows/sarguardian-streaming-batch.yml"
+      ],
+      "note": "Known Place PR #85 version differs from Backend main at this path. The root counterpart is an adapted workflow, not a byte-identical copy. Compare the PR #85 caller/worker fields, science pins, callbacks and output artifacts before declaring which source variant is canonical. Root streaming batch exists; verify manifest, 15-at-a-time batching where applicable, failed-only retries, preassembly checks and final failure propagation."
+    }
+  ],
+  "summary": {
+    "source_workflow_instances": 82,
+    "root_workflow_files": 42,
+    "disposition_counts": {
+      "ci-consolidated-parity-review": 3,
+      "renamed-root-port-contract-review": 6,
+      "root-present-contract-review-required": 33,
+      "api-dispatch-replacement-contract-review": 1,
+      "archive-confirmed-inactive": 4,
+      "feature-variant-contract-review-required": 25,
+      "manual-research-port-required": 3,
+      "author-exact-research-disposition-required": 1,
+      "split-ci-live-contract-review": 1,
+      "manual-renderer-port-required": 2,
+      "archive-inactive-consent-bridge": 2,
+      "drive-retry-port-review-required": 1
+    }
+  },
+  "interpretation": "This is an auditable source-to-root disposition inventory. A root path being present does not prove semantic parity or production readiness. Every review-required item remains open until dispatch inputs, callers, source pins, secrets, callbacks, artifacts, retries, retention, trigger scope and failure propagation are validated."
+}

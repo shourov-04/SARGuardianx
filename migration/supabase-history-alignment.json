@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "project_name": "SARGuardian-Monorepo",
+  "project_ref": "qbmhpdprvxssqinnommz",
+  "observed_at": "2026-11-06",
+  "matching_rule": "Supabase CLI migration list compares local and remote migration timestamps; remote version is the 14-digit prefix of the local SQL filename.",
+  "remote_records_source": "Supabase project migration inventory read via the connected project integration",
+  "records": [
+    {
+      "remote_version": "20261106000844",
+      "remote_name": "20261017143644_processing_jobs",
+      "destination_path": "infrastructure/supabase/migrations/20261106000844_20261017143644_processing_jobs.sql",
+      "blob_sha": "0c62c69b8eecf674f65af5022e81e09d65fbecef",
+      "source_path": "migration/source-snapshots/dynamic/Backend/supabase/migrations/20261017143644_processing_jobs.sql",
+      "kind": "exact-source-sql"
+    },
+    {
+      "remote_version": "20261106000850",
+      "remote_name": "20261022203034_displacement_jobs",
+      "destination_path": "infrastructure/supabase/migrations/20261106000850_20261022203034_displacement_jobs.sql",
+      "blob_sha": "a894b4d28d5fcda3df143629b9e70d613d3b727d",
+      "source_path": "migration/source-snapshots/dynamic/Backend/supabase/migrations/20261022203034_displacement_jobs.sql",
+      "kind": "exact-source-sql"
+    },
+    {
+      "remote_version": "20261106000856",
+      "remote_name": "20261023141449_displacement_active_request_guard",
+      "destination_path": "infrastructure/supabase/migrations/20261106000856_20261023141449_displacement_active_request_guard.sql",
+      "blob_sha": "536d8c473f3d19de29b532d42127550262c33104",
+      "source_path": "migration/source-snapshots/dynamic/Backend/supabase/migrations/20261023141449_displacement_active_request_guard.sql",
+      "kind": "exact-source-sql"
+    },
+    {
+      "remote_version": "20261106000901",
+      "remote_name": "20261024111404_scientific_request_contract",
+      "destination_path": "infrastructure/supabase/migrations/20261106000901_20261024111404_scientific_request_contract.sql",
+      "blob_sha": "65c64d04c179bf4c1228a5d7edbd73510ad2b6fd",
+      "source_path": "migration/source-snapshots/dynamic/Backend/supabase/migrations/20261024111404_scientific_request_contract.sql",
+      "kind": "exact-source-sql"
+    },
+    {
+      "remote_version": "20261106000905",
+      "remote_name": "20261027003643_place_target_contract",
+      "destination_path": "infrastructure/supabase/migrations/20261106000905_20261027003643_place_target_contract.sql",
+      "blob_sha": "f588c72bcd064779a5790f979db709b86b23dff2",
+      "source_path": "migration/source-snapshots/dynamic/Backend/supabase/migrations/20261027003643_place_target_contract.sql",
+      "kind": "exact-source-sql"
+    },
+    {
+      "remote_version": "20261106000909",
+      "remote_name": "20261103100000_river_shift_jobs",
+      "destination_path": "infrastructure/supabase/migrations/20261106000909_20261103100000_river_shift_jobs.sql",
+      "blob_sha": "4d2fce5612c84baf2e8b06a9df02f05b2e0b0204",
+      "source_path": "migration/source-snapshots/dynamic/Backend/supabase/migrations/20261103100000_river_shift_jobs.sql",
+      "kind": "exact-source-sql"
+    },
+    {
+      "remote_version": "20261106000923",
+      "remote_name": "20261104120000_river_shift_analysis_modes",
+      "destination_path": "infrastructure/supabase/migrations/20261106000923_20261104120000_river_shift_analysis_modes.sql",
+      "blob_sha": "895cade15db273e233433c228a7e20e85118f043",
+      "source_path": "migration/source-snapshots/dynamic/Backend/supabase/migrations/20261104120000_river_shift_analysis_modes.sql",
+      "kind": "exact-source-sql"
+    },
+    {
+      "remote_version": "20261106000928",
+      "remote_name": "20261105205909_catalog_preflight_retention",
+      "destination_path": "infrastructure/supabase/migrations/20261106000928_20261105205909_catalog_preflight_retention.sql",
+      "blob_sha": "d37e18839e4b143dd3cc8dbbab17f8d2289f17a1",
+      "source_path": null,
+      "kind": "monorepo-forward-migration"
+    },
+    {
+      "remote_version": "20261106064055",
+      "remote_name": "20261106100000_public_default_privileges_hardening",
+      "destination_path": "infrastructure/supabase/migrations/20261106064055_20261106100000_public_default_privileges_hardening.sql",
+      "blob_sha": "e39b6f4a5e6f1515e846561a4f80815fe367e80c",
+      "source_path": null,
+      "kind": "monorepo-forward-migration"
+    },
+    {
+      "remote_version": "20261106133548",
+      "remote_name": "processing_jobs_preflight_id_index",
+      "destination_path": "infrastructure/supabase/migrations/20261106133548_processing_jobs_preflight_id_index.sql",
+      "blob_sha": "94b175759d9e5205208af905a4468952849f55bc",
+      "source_path": null,
+      "kind": "monorepo-forward-migration"
+    },
+    {
+      "remote_version": "20261106134132",
+      "remote_name": "optimize_owner_read_rls_initplan",
+      "destination_path": "infrastructure/supabase/migrations/20261106134132_optimize_owner_read_rls_initplan.sql",
+      "blob_sha": "c856e3e9aa88bd31d63f1e03ee83c5e6f3fa7b31",
+      "source_path": null,
+      "kind": "monorepo-forward-migration"
+    },
+    {
+      "remote_version": "20261106171458",
+      "remote_name": "known_place_request_ownership",
+      "destination_path": "infrastructure/supabase/migrations/20261106171458_known_place_request_ownership.sql",
+      "blob_sha": "20c90f023e18ec9cc76d6fc83d81273b3141b2d3",
+      "source_path": null,
+      "kind": "monorepo-forward-migration"
+    }
+  ]
+}

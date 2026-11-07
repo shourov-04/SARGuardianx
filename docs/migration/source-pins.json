@@ -1,0 +1,264 @@
+{
+  "manifest_version": 1,
+  "audited_at": "2026-11-05",
+  "target_repository": "moshiour0/SARGuardian-Monorepo",
+  "source_repositories": [
+    {
+      "name": "dynamic",
+      "repository": "moshiour0/SARGuardian_Dynamic",
+      "audited_default_branch": "main",
+      "audited_commit": "dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+      "role": [
+        "react_vite_frontend",
+        "active_firebase_supabase_fastapi_api",
+        "job_persistence_and_callbacks",
+        "deployment_adapters"
+      ],
+      "import_status": "verified",
+      "notes": "Includes Frontend and the active Backend/app. Not frontend-only.",
+      "snapshot_paths": [
+        "migration/source-snapshots/dynamic"
+      ]
+    },
+    {
+      "name": "backend",
+      "repository": "moshiour0/SARGuardian-backend",
+      "audited_default_branch": "main",
+      "audited_commit": "97d849454918b1425ac41bb70e7a32d11cfd3833",
+      "role": [
+        "processing_workers",
+        "find_displacements_diagnostics",
+        "river_shift_gcov_engine",
+        "github_actions_workflows"
+      ],
+      "import_status": "verified",
+      "notes": "Contains a separate legacy app/ service. Main does not contain the full Known Place implementation.",
+      "snapshot_paths": [
+        "migration/source-snapshots/backend-main",
+        "migration/source-snapshots/backend-known-place-pr85"
+      ]
+    },
+    {
+      "name": "nisar_science",
+      "repository": "moshiour0/SARGuardian",
+      "audited_default_branch": "main",
+      "audited_commit": "9fcb543ef28a7f6fe70a379aed9cfe3e43e277ec",
+      "role": [
+        "pinned_nisar_science_source"
+      ],
+      "import_status": "verified",
+      "notes": "Current main is not a substitute for historically pinned revisions.",
+      "snapshot_paths": [
+        "migration/source-snapshots/nisar-science",
+        "migration/source-snapshots/nisar-pins/10639a9",
+        "migration/source-snapshots/nisar-pins/006d4cd"
+      ]
+    }
+  ],
+  "additional_immutable_refs": [
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "feat/know-place-analysis",
+      "commit": "bd7a59c54ddae7c19fd88896e877c3a530b43d9e",
+      "role": "Known Place full implementation branch",
+      "import_status": "preserved_in_history",
+      "status": "preserved_as_ancestor_of_imported_pr85_head"
+    },
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "pull/85/head",
+      "commit": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+      "role": "Known Place independent measurement/reference polygon changes",
+      "status": "open_pull_request_against_feat/know-place-analysis",
+      "import_status": "verified",
+      "notes": "Preserve both PR head and its non-main base lineage.",
+      "snapshot_path": "migration/source-snapshots/backend-known-place-pr85"
+    },
+    {
+      "repository": "moshiour0/SARGuardian",
+      "ref": "10639a916c9829850775410b3ed7de62e527770d",
+      "role": "immutable science source used by Dynamic callback adapter / NISAR pipeline",
+      "import_status": "verified",
+      "commit": "10639a916c9829850775410b3ed7de62e527770d",
+      "ref_kind": "commit",
+      "snapshot_path": "migration/source-snapshots/nisar-pins/10639a9"
+    },
+    {
+      "repository": "moshiour0/SARGuardian",
+      "ref": "006d4cd1485cf80e509eaf8717c12e9c6390ac09",
+      "role": "immutable source used by backend dynamic AOI worker",
+      "import_status": "verified",
+      "commit": "006d4cd1485cf80e509eaf8717c12e9c6390ac09",
+      "ref_kind": "commit",
+      "snapshot_path": "migration/source-snapshots/nisar-pins/006d4cd"
+    },
+    {
+      "repository": "moshiour0/SARGuardian",
+      "ref": "ab547ecc82bcc4d6ccef545a59852536c2beacc6",
+      "role": "immutable source used for fixed source-AOI streaming / extended science",
+      "import_status": "preserved_in_history",
+      "commit": "ab547ecc82bcc4d6ccef545a59852536c2beacc6",
+      "ref_kind": "commit",
+      "status": "ancestor_of_imported_nisar_main",
+      "snapshot_path": "migration/source-snapshots/nisar-science"
+    },
+    {
+      "repository": "moshiour0/SARGuardian",
+      "ref": "f038e4dfdb53c8d9793aaaefe173570a1032026c",
+      "commit": "f038e4dfdb53c8d9793aaaefe173570a1032026c",
+      "role": "Dynamic active API science_adapter/run_displacement.py SCIENCE_REF",
+      "status": "ancestor_of_current_nisar_science_main",
+      "import_status": "preserved_in_history",
+      "notes": "Verified with GitHub compare: this exact source revision is an ancestor of NISAR science main and is therefore reachable through the imported main source history."
+    },
+    {
+      "repository": "moshiour0/SARGuardian_Dynamic",
+      "ref": "db6472e1c304e21242f1ab1dfd671ccb21ba5697",
+      "commit": "db6472e1c304e21242f1ab1dfd671ccb21ba5697",
+      "role": "Dynamic historical API/workflow snapshot checked out by backend main sarguardian-aoi-wkt-dashboard.yml",
+      "status": "diverged_from_audited_dynamic_main",
+      "import_status": "verified",
+      "snapshot_path": "migration/source-snapshots/dynamic-pins/db6472",
+      "notes": "Exact revision not an ancestor of Dynamic main; GitHub compare shows 14 commits on this revision not present in audited main. Preserve separately.",
+      "tree_import_method": "exact_git_tree_with_commit_history_parent"
+    },
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "d9e67df7d800032c37d23f74df44c98e3ab655f7",
+      "commit": "d9e67df7d800032c37d23f74df44c98e3ab655f7",
+      "role": "Backend historical aggregation/reassembly tool snapshot checked out by reassemble workflow",
+      "status": "diverged_from_audited_backend_main",
+      "import_status": "verified",
+      "snapshot_path": "migration/source-snapshots/backend-pins/d9e67",
+      "notes": "Exact revision not an ancestor of backend main; GitHub compare shows 98 commits on this revision not present in audited main. Preserve separately.",
+      "tree_import_method": "exact_git_tree_with_commit_history_parent"
+    },
+    {
+      "repository": "Sagormodak/SARGuardian",
+      "ref": "77cc9646cfa46d3aff3669d351912f984cf67aa3",
+      "commit": "77cc9646cfa46d3aff3669d351912f984cf67aa3",
+      "role": "Legacy manual GOFF/GUNW Earthaccess diagnostic workflows pinned to alternate SARGuardian fork",
+      "status": "external_legacy_fork_pin",
+      "import_status": "verified",
+      "snapshot_path": "migration/source-snapshots/legacy-fork/77cc964",
+      "notes": "Pinned by PR #85 manual diagnostic workflows. It is not the current moshiour0/SARGuardian source. Preserve for provenance; do not automatically treat as production science source.",
+      "tree_import_method": "exact_git_tree_with_commit_history_parent"
+    },
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "ecd125f68ed61c276406f73a1d77eb27979e204e",
+      "commit": "ecd125f68ed61c276406f73a1d77eb27979e204e",
+      "role": "Dynamic AOI workflow's pinned dashboard-source checkout for backend retention dependencies",
+      "status": "ancestor_of_audited_backend_main",
+      "import_status": "preserved_in_history",
+      "notes": "Exact revision is an ancestor of backend main and remains reachable through migration/source-snapshots/backend-main; no duplicate tree was needed."
+    },
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "0e0611c12913044787ee84a39fa60a81d30ae516",
+      "commit": "0e0611c12913044787ee84a39fa60a81d30ae516",
+      "role": "Pinned Known Place two-polygon reusable workflow used by the backend main dispatcher",
+      "status": "ancestor_of_known_place_pr85_head",
+      "import_status": "preserved_in_history",
+      "notes": "GitHub compare confirms this exact workflow commit is an ancestor of PR #85 head bfde7dde8ada92a03054cd8dbad8daa7a5c119f8; it remains reachable through the immutable Known Place snapshot."
+    },
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "d847b0461a2fec1bdf2abcce0a6b1d2f9dddabc9",
+      "commit": "d847b0461a2fec1bdf2abcce0a6b1d2f9dddabc9",
+      "role": "Pinned author-exact replay reusable workflow used by the backend main paper dispatcher",
+      "status": "ancestor_of_known_place_pr85_head",
+      "import_status": "preserved_in_history",
+      "notes": "GitHub compare confirms this exact reusable workflow commit is an ancestor of PR #85 head; no separate workflow tree was required."
+    },
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "b825df798ea4cb9874aa10dd01174d2a8ef73cba",
+      "commit": "b825df798ea4cb9874aa10dd01174d2a8ef73cba",
+      "tree_sha": "3c77b2d52474364020acebeb4338b5babe7ff4ec",
+      "role": "backend_code_ref passed by the author-exact P05023 replay dispatcher",
+      "status": "diverged_from_known_place_pr85_head",
+      "import_status": "verified_exact_tree",
+      "snapshot_path": "migration/source-snapshots/backend-pins/b825df",
+      "tracked_paths": 277,
+      "notes": "This exact code pin is three commits on a sibling line from the PR #85 feature head, with merge base d847b0461a2fec1bdf2abcce0a6b1d2f9dddabc9. It is not an ancestor of the current PR #85 head. Its complete recursive tree is preserved separately; all 277 source blobs/modes are compared by CI. Do not substitute the PR #85 engine or backend main for this author-exact pinned code revision.",
+      "tree_import_method": "exact_git_tree_snapshot; source commit SHA and GitHub tree SHA recorded"
+    },
+    {
+      "repository": "moshiour0/SARGuardian-backend",
+      "ref": "5edf41a61d5b10b0f3d4bd8f67619d512cb1c204",
+      "commit": "5edf41a61d5b10b0f3d4bd8f67619d512cb1c204",
+      "role": "Dynamic Known Place API workflow's pinned generic two-polygon reusable workflow",
+      "status": "ancestor_of_known_place_pr85_head",
+      "import_status": "preserved_in_history",
+      "notes": "GitHub compare confirms this immutable revision is an ancestor of PR #85 head bfde7dde8ada92a03054cd8dbad8daa7a5c119f8. No additional source tree snapshot is necessary."
+    }
+  ],
+  "integrity_rule": "Every imported snapshot must trace to an exact source tree SHA. Never advance pins without reviewed scientific regression and provenance update.",
+  "snapshot_import": {
+    "import_commit": "f4371f160efa6e32fce407a2909812a8545f2722",
+    "method": "Exact Git tree imports. Source commit history is retained for the nine commit-backed snapshots; the divergent Known Place author-exact b825df code pin is additionally preserved as a separate exact tree snapshot with its commit SHA and tree SHA recorded.",
+    "total_source_tracked_paths": 1685,
+    "snapshot_paths": [
+      {
+        "source": "moshiour0/SARGuardian_Dynamic@dd64b7adc90594f1d7f316b352e39fbac2013cb6",
+        "path": "migration/source-snapshots/dynamic",
+        "tracked_paths": 185
+      },
+      {
+        "source": "moshiour0/SARGuardian-backend@97d849454918b1425ac41bb70e7a32d11cfd3833",
+        "path": "migration/source-snapshots/backend-main",
+        "tracked_paths": 244
+      },
+      {
+        "source": "moshiour0/SARGuardian-backend@bfde7dde8ada92a03054cd8dbad8daa7a5c119f8",
+        "path": "migration/source-snapshots/backend-known-place-pr85",
+        "tracked_paths": 277
+      },
+      {
+        "source": "moshiour0/SARGuardian@9fcb543ef28a7f6fe70a379aed9cfe3e43e277ec",
+        "path": "migration/source-snapshots/nisar-science",
+        "tracked_paths": 110
+      },
+      {
+        "source": "moshiour0/SARGuardian@10639a916c9829850775410b3ed7de62e527770d",
+        "path": "migration/source-snapshots/nisar-pins/10639a9",
+        "tracked_paths": 133
+      },
+      {
+        "source": "moshiour0/SARGuardian@006d4cd1485cf80e509eaf8717c12e9c6390ac09",
+        "path": "migration/source-snapshots/nisar-pins/006d4cd",
+        "tracked_paths": 135
+      },
+      {
+        "source": "moshiour0/SARGuardian_Dynamic@db6472e1c304e21242f1ab1dfd671ccb21ba5697",
+        "path": "migration/source-snapshots/dynamic-pins/db6472",
+        "tracked_paths": 130
+      },
+      {
+        "source": "moshiour0/SARGuardian-backend@d9e67df7d800032c37d23f74df44c98e3ab655f7",
+        "path": "migration/source-snapshots/backend-pins/d9e67",
+        "tracked_paths": 86
+      },
+      {
+        "source": "Sagormodak/SARGuardian@77cc9646cfa46d3aff3669d351912f984cf67aa3",
+        "path": "migration/source-snapshots/legacy-fork/77cc964",
+        "tracked_paths": 108
+      },
+      {
+        "source": "moshiour0/SARGuardian-backend@b825df798ea4cb9874aa10dd01174d2a8ef73cba",
+        "path": "migration/source-snapshots/backend-pins/b825df",
+        "tracked_paths": 277,
+        "tree_sha": "3c77b2d52474364020acebeb4338b5babe7ff4ec",
+        "import_kind": "exact_tree_snapshot; not represented as an ancestor of PR #85"
+      }
+    ],
+    "verified": {
+      "recursive_target_tree_not_truncated": true,
+      "source_and_snapshot_path_object_counts_match": true,
+      "source_file_modes_types_and_blob_shas_verified_by_ci": true,
+      "source_commit_parents_preserved": true,
+      "original_repositories_modified": false
+    }
+  }
+}

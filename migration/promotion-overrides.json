@@ -1,0 +1,354 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Explicit, hash-pinned promotion deltas. Immutable source snapshots remain byte-for-byte preserved; only these reviewed destination files may differ.",
+  "approved_overrides": [
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/.env.example",
+      "destination_path": "apps/api/.env.example",
+      "source_blob_sha": "767a78697c484b572612a5807d1fc98d4de69460",
+      "destination_blob_sha": "93bfdcd633d1ae800ed413d191d1161c66c1d0c8",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Retain legacy-compatible defaults while documenting the exact Monorepo Preview-only displacement, generic Known Place, author-exact P05023 and RiverShift workflow destinations. All API processing flags remain false by default.",
+      "implementation_commits": [
+        "088dddb2c0b66f28328a7f8373390b6679fdff3a",
+        "3e8c6ff40fffca44447e7f98fef8383b5f638360",
+        "f336dc770d03c94560c41b4880fccbdff1c8c350",
+        "be0df97974ff199ef1d247e49099964025789624",
+        "6b814c23c2b93aa2fda9ee1b99ec84582f061a67",
+        "017642df1e121c5b82f57dcfe7be165195d96431"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_config.py",
+        "apps/api/tests/test_known_place.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/app/config.py",
+      "destination_path": "apps/api/app/config.py",
+      "source_blob_sha": "b2fed548e2a33c85707c01e8dfed3d7de89953ca",
+      "destination_blob_sha": "57e48ec42e217ffc5355cd6b07306fa8e2406659",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Add separate generic and author-exact Known Place workflow destinations with legacy Backend defaults, plus strict repository, workflow filename and branch/ref validation for RiverShift dispatch targets.",
+      "implementation_commits": [
+        "ff86cce2363c7aac7d0a41e6bf534f05d0f9ff3b",
+        "1f6ed9adc873167bcae6dd65605274f1114d09b9",
+        "50638a7e0a4ca6add8f56df57706007cc2cdd978",
+        "04563332b71bac770dacb1cbbbc325900b48e501"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_config.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/app/known_place.py",
+      "destination_path": "apps/api/app/known_place.py",
+      "source_blob_sha": "4b5a36a0a88a7e46c27ba0b2f52b5925279de7fc",
+      "destination_blob_sha": "fca6e3324d5d9dd94a43f2bc929b0f05ee273be0",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Route generic two-polygon and author-exact P05023 dispatch, status and result retrieval through separate destinations; let the API supply a UUID already persisted to the Firebase owner ledger while preserving direct-call behavior.",
+      "implementation_commits": [
+        "097243026e42fe9e09573046380be5c0d8c232d9",
+        "62a8cec36a5bf4c30d5dccb17ffe2c0108e925a0",
+        "796f978b9a80a96db92fb2e4ec3f359593bae0b4",
+        "dbdba91e266493ab094279595d7eee6ea4fb1355"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_main.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/tests/test_config.py",
+      "destination_path": "apps/api/tests/test_config.py",
+      "source_blob_sha": "17dd98c0fe943c7d8551663c1aa702f0ab7e5687",
+      "destination_blob_sha": "7a26278564d03691292fe27a39a6be21ff988d8a",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Add regression coverage for Known Place legacy defaults and independent destinations, plus rejection of unsafe Known Place and RiverShift repository, workflow filename and branch/ref settings.",
+      "implementation_commits": [
+        "41c3f15e2d4da58026b2e2229f8ad09c33919671",
+        "db07a956493dc3eb4d09aa772e29642b4ae2c971",
+        "9f93dc1dd2681bd459ab91752e1bb38d8857d3a4"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_config.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/tests/test_known_place.py",
+      "destination_path": "apps/api/tests/test_known_place.py",
+      "source_blob_sha": "ea5e93ba91e548de8b86ff128b9145d34b78e5a6",
+      "destination_blob_sha": "63fe9b2b350aad7a4a963840eb32ecca6621d99f",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Add API regression coverage for generic and author-exact Known Place dispatch destinations, request-correlated run status, and artifact downloads from the configured repository.",
+      "implementation_commits": [
+        "f2cca2b57ccd40ad93ff1ab41a5b862f41833b51",
+        "f9a6695d8f5f52a75cda93d8df07c5565b29b5b9",
+        "d0326df1f9517925114ec285a524de38a500f276",
+        "71a081e380bec8094a5aac6b5d7f34249b88d6fd"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_known_place.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/tests/test_river_shift_jobs.py",
+      "destination_path": "apps/api/tests/test_river_shift_jobs.py",
+      "source_blob_sha": "fe9916362b343d14b9add6cb480c23496c10924c",
+      "destination_blob_sha": "a825f65b20dab7f4ee3a184bbf1a7658a7b925e2",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Add regression tests proving failed or missing GitHub workflow runs reach failed terminal status while a verified signed success cannot be overwritten by later polling.",
+      "implementation_commits": [
+        "a2708d73cf8fe765676b003fe1c363c8764b9914",
+        "70c780d2bee11dc2a821040b4d10209ac519affa"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_river_shift_jobs.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/science_adapter/upload_to_drive.py",
+      "destination_path": "apps/api/science_adapter/upload_to_drive.py",
+      "source_blob_sha": "6c68299f77b00eea53fc946c216a7c107724474e",
+      "destination_blob_sha": "7da676cbb71e5491916cb30b53ec8a230d89ed32",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Remove the deprecated GOOGLE_DRIVE_FOLDER_ID compatibility fallback from the active Monorepo API. Only GOOGLE_DRIVE_PARENT_FOLDER_ID may configure parent-folder uploads; immutable Dynamic source snapshot remains unchanged.",
+      "implementation_commits": [
+        "6b814c23c2b93aa2fda9ee1b99ec84582f061a67"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_drive_upload.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/tests/test_drive_upload.py",
+      "destination_path": "apps/api/tests/test_drive_upload.py",
+      "source_blob_sha": "34746fc94a9459e351e6068860fa6ce7bff28ad7",
+      "destination_blob_sha": "6c71e83bf8f1333e539735dd7f499cdf315442cc",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Update promoted API Drive tests to require GOOGLE_DRIVE_PARENT_FOLDER_ID and assert that legacy GOOGLE_DRIVE_FOLDER_ID alone is rejected.",
+      "implementation_commits": [
+        "6b814c23c2b93aa2fda9ee1b99ec84582f061a67",
+        "3683abf7b086c25013ae9f92d1d376f63b1a791c"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_drive_upload.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/README.md",
+      "destination_path": "apps/api/README.md",
+      "source_blob_sha": "eaf0f888f6a22619be68743700d9b9322f33a113",
+      "destination_blob_sha": "e6a177df1347ab75c870e068fabb78b478919ab6",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Rewrite the promoted API documentation for apps/api and Vercel, remove obsolete Render/old directory instructions and document the canonical Drive parent ID plus exact Monorepo dispatch targets.",
+      "implementation_commits": [
+        "6b814c23c2b93aa2fda9ee1b99ec84582f061a67",
+        "017642df1e121c5b82f57dcfe7be165195d96431"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_drive_upload.py",
+        "apps/api/tests/test_config.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "promotion_scope": "Dynamic frontend promotion",
+      "source_path": "migration/source-snapshots/dynamic/Frontend/src/App.tsx",
+      "destination_path": "apps/web/src/App.tsx",
+      "source_blob_sha": "f11f9197bd5abf4befe21203517338e6bc3a1ad3",
+      "destination_blob_sha": "825acfe098744d39675f193d8b7929de217f06ff",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Expose a user-visible authenticated API and Monorepo Supabase read-check state after Google sign-in without dispatching a processing workflow.",
+      "implementation_commits": [
+        "0403c800e5d37642725880f8b37a6e6ef0c03ee2",
+        "9214fc17b2625e6432c0c5cc58300557ab2c116a",
+        "72eda2cc99446cf59ec086b4bc7356574b40716c",
+        "2c0f775c525f4e072cac2c8b1a82873a14aa66f1",
+        "ff4637abdf62afc9d559d822c7c8526fb441e028",
+        "da5934fe1f7ba3e3d5eea61067ac5a8a7a14c652"
+      ],
+      "verification_paths": [
+        "apps/web/src/authGating.test.ts"
+      ]
+    },
+    {
+      "promotion_scope": "Dynamic frontend promotion",
+      "source_path": "migration/source-snapshots/dynamic/Frontend/src/pages/Home.tsx",
+      "destination_path": "apps/web/src/pages/Home.tsx",
+      "source_blob_sha": "cd84dc5d9609e9306d83d8b022e08b65d8ffe544",
+      "destination_blob_sha": "b8efb5640e2f5ee4c79e3ee79303f1e226c90da4",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Display the authenticated backend readiness outcome clearly on Home and consume the tested shared notice helper.",
+      "implementation_commits": [
+        "0403c800e5d37642725880f8b37a6e6ef0c03ee2",
+        "9214fc17b2625e6432c0c5cc58300557ab2c116a",
+        "72eda2cc99446cf59ec086b4bc7356574b40716c",
+        "2c0f775c525f4e072cac2c8b1a82873a14aa66f1",
+        "ff4637abdf62afc9d559d822c7c8526fb441e028",
+        "da5934fe1f7ba3e3d5eea61067ac5a8a7a14c652"
+      ],
+      "verification_paths": [
+        "apps/web/src/authGating.test.ts"
+      ]
+    },
+    {
+      "promotion_scope": "Dynamic frontend promotion",
+      "source_path": "migration/source-snapshots/dynamic/Frontend/src/authGating.ts",
+      "destination_path": "apps/web/src/authGating.ts",
+      "source_blob_sha": "244ffe08dec599810ad08c46b0990aca15730857",
+      "destination_blob_sha": "967f635c60419786299e49d95db113a527eaa765",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Centralize typed, user-visible states for the safe Firebase ID-token and Supabase read-only readiness check.",
+      "implementation_commits": [
+        "0403c800e5d37642725880f8b37a6e6ef0c03ee2",
+        "9214fc17b2625e6432c0c5cc58300557ab2c116a",
+        "72eda2cc99446cf59ec086b4bc7356574b40716c",
+        "2c0f775c525f4e072cac2c8b1a82873a14aa66f1",
+        "ff4637abdf62afc9d559d822c7c8526fb441e028",
+        "da5934fe1f7ba3e3d5eea61067ac5a8a7a14c652"
+      ],
+      "verification_paths": [
+        "apps/web/src/authGating.test.ts"
+      ]
+    },
+    {
+      "promotion_scope": "Dynamic frontend promotion",
+      "source_path": "migration/source-snapshots/dynamic/Frontend/src/authGating.test.ts",
+      "destination_path": "apps/web/src/authGating.test.ts",
+      "source_blob_sha": "7332a9c54abd0b48fccdc8516593eb93fdf8256b",
+      "destination_blob_sha": "5ae7af50b523c503d3f46c295b50eee9daa1c60e",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Add unit tests covering idle, checking, ready and error outcomes for the authenticated backend readiness notice.",
+      "implementation_commits": [
+        "0403c800e5d37642725880f8b37a6e6ef0c03ee2",
+        "9214fc17b2625e6432c0c5cc58300557ab2c116a",
+        "72eda2cc99446cf59ec086b4bc7356574b40716c",
+        "2c0f775c525f4e072cac2c8b1a82873a14aa66f1",
+        "ff4637abdf62afc9d559d822c7c8526fb441e028",
+        "da5934fe1f7ba3e3d5eea61067ac5a8a7a14c652"
+      ],
+      "verification_paths": [
+        "apps/web/src/authGating.test.ts"
+      ]
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/app/main.py",
+      "destination_path": "apps/api/app/main.py",
+      "source_blob_sha": "27316589dbfd4213f16c0de9ebd22beb8434ccae",
+      "destination_blob_sha": "7e3d2a392c9bb63184c58656d007ac2415ad7696",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Persist Firebase owner-to-request mappings before Known Place dispatch and require matching owner UID plus workflow kind on generic status, result, bundle and author-exact status reads.",
+      "implementation_commits": [
+        "b1f8f7a389d1ab6b880fc8b50b24ec1efe7b2720"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_main.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/app/persistence.py",
+      "destination_path": "apps/api/app/persistence.py",
+      "source_blob_sha": "a5828d031927e4ae7d7d998c3dddea1a99c87098",
+      "destination_blob_sha": "4012c6bcfb450e848bec2d3d046cce7a90d8a430",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Add service-role-only Supabase methods for Known Place request ownership and fail API server-role preflight when the owner-mapping migration has not been applied.",
+      "implementation_commits": [
+        "7b6e6be2d5d00f88146f966610f0bf07b97b5eae"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_main.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/tests/test_main.py",
+      "destination_path": "apps/api/tests/test_main.py",
+      "source_blob_sha": "2bc956c3a4a5c2a347677b38772955283da70ea2",
+      "destination_blob_sha": "6dbaef1bf220ce252b7ebf2302703a4d48247508",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Test owner-only Known Place status, result and bundle retrieval, workflow-kind separation, authentication and durable owner mapping before the GitHub dispatch call.",
+      "implementation_commits": [
+        "b5a7bc85eb7d8c7a3895ce589ae37ea0697b4702"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_main.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "source_path": "migration/source-snapshots/dynamic/Backend/tests/test_persistence_headers.py",
+      "destination_path": "apps/api/tests/test_persistence_headers.py",
+      "source_blob_sha": "410d64d9e71549cd859d58ddba0b5d3381d3833b",
+      "destination_blob_sha": "f90ef1d12cf6fc5a61b934def2f7e06cec7c30d8",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Extend the Supabase secret-header regression test to assert the zero-row service-role access probe checks both displacement_jobs and known_place_requests.",
+      "implementation_commits": [
+        "f6d4089e2f1e8b1cc5c8c3476dba7838873e3dd5"
+      ],
+      "verification_paths": [
+        "apps/api/tests/test_persistence_headers.py"
+      ],
+      "promotion_scope": "Dynamic active API promotion"
+    },
+    {
+      "promotion_scope": "Find Displacements tools promotion",
+      "source_path": "migration/source-snapshots/backend-main/tools/plan_aoi_retries.py",
+      "destination_path": "engines/find-displacements/tools/plan_aoi_retries.py",
+      "source_blob_sha": "3d607faa81fac17970adbe627332afbbd674d2f7",
+      "destination_blob_sha": "c998b1bf94c9ef03997cd7dac10dc7a38444bbf3",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Retry only explicit transient Google Drive retention failures after download, AOI preflight, reader and structural validation have passed; preserve deterministic science/provenance failures as terminal and never rerun green products.",
+      "implementation_commits": [
+        "99dfa9189fe186dd7bf04f89a150e3bf979d7331",
+        "93b815b77e6c60937f5e6e3c12d53c9f88f8fa89"
+      ],
+      "verification_paths": [
+        "engines/find-displacements/tools/tests/test_plan_aoi_retries.py"
+      ]
+    },
+    {
+      "promotion_scope": "Find Displacements tools promotion",
+      "source_path": "migration/source-snapshots/backend-main/tools/tests/test_plan_aoi_retries.py",
+      "destination_path": "engines/find-displacements/tools/tests/test_plan_aoi_retries.py",
+      "source_blob_sha": "6ee6a74ed9344f1df3dad91954444bb8c3042c6f",
+      "destination_blob_sha": "6ec279261e623d43ca5901b8d21d6b4fcd3009d1",
+      "mode": "100644",
+      "object_type": "blob",
+      "reason": "Add regression tests proving transient Drive HTTP 502 after validated science retries only the failed product, permanent Drive 403 is terminal, successful products remain PASS, and workflow assertions inspect the active root workflow graph.",
+      "implementation_commits": [
+        "aef4b1076ae1315fd96a877f31711543e010fb50",
+        "93b815b77e6c60937f5e6e3c12d53c9f88f8fa89",
+        "cde8671ba6a1f56846c34e10b36af834ba9f4cc4"
+      ],
+      "verification_paths": [
+        "engines/find-displacements/tools/tests/test_plan_aoi_retries.py"
+      ]
+    }
+  ]
+}

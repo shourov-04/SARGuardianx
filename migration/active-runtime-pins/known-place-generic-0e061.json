@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "source_repository": "moshiour0/SARGuardian-backend",
+  "source_ref": "0e0611c12913044787ee84a39fa60a81d30ae516",
+  "source_workflow_commit": "0e0611c12913044787ee84a39fa60a81d30ae516",
+  "source_dispatcher_file": ".github/workflows/know-place-aoi-dispatcher.yml",
+  "source_dispatcher_blob": "90b254a68dae6c8449edeacf4ea205743ee89380",
+  "source_reusable_workflow": ".github/workflows/know-place-aoi-analysis.yml",
+  "source_reusable_workflow_blob": "844cdeefd2d78c74c623a4d910f9b6091789d79b",
+  "backend_science_ref": "0e0611c12913044787ee84a39fa60a81d30ae516",
+  "feature_branch": "feat/know-place-analysis",
+  "feature_branch_tip": "bd7a59c54ddae7c19fd88896e877c3a530b43d9e",
+  "two_polygon_pr": {
+    "number": 85,
+    "state": "open",
+    "draft": true,
+    "merged": false,
+    "base": "feat/know-place-analysis",
+    "base_sha": "bd7a59c54ddae7c19fd88896e877c3a530b43d9e",
+    "head": "bfde7dde8ada92a03054cd8dbad8daa7a5c119f8"
+  },
+  "current_production_vs_pr85": {
+    "active_pin_ahead_of_pr85_commits": 32,
+    "active_pin_ahead_of_feature_branch_tip_commits": 78
+  },
+  "files": [
+    {
+      "source_path": "tools/know_place/aoi_request.py",
+      "destination_path": "engines/known-place/tools/know_place/aoi_request.py",
+      "source_blob_sha": "8fcfdf635994ceb6093160931f21ae6cf0f986de",
+      "source_bytes": 20321
+    },
+    {
+      "source_path": "tools/know_place/aoi_runner.py",
+      "destination_path": "engines/known-place/tools/know_place/aoi_runner.py",
+      "source_blob_sha": "9364b94d6629c67e44f007a0e2634824aa7e1f9f",
+      "source_bytes": 84131
+    },
+    {
+      "source_path": "tools/know_place/geometry.py",
+      "destination_path": "engines/known-place/tools/know_place/geometry.py",
+      "source_blob_sha": "25292440fd94426882a8c51b00b186b162de429a",
+      "source_bytes": 19962
+    },
+    {
+      "source_path": "tools/know_place/series.py",
+      "destination_path": "engines/known-place/tools/know_place/series.py",
+      "source_blob_sha": "f1b67c9255706b8e10ad4e2e280e80640490b405",
+      "source_bytes": 17803
+    },
+    {
+      "source_path": "tools/know_place/upload_bundle_to_drive.py",
+      "destination_path": "engines/known-place/tools/know_place/upload_bundle_to_drive.py",
+      "source_blob_sha": "ef721ee9e1d1b388927866054883440f95e1f2f6",
+      "source_bytes": 9184
+    },
+    {
+      "source_path": "tools/tests/test_know_place_aoi_runner.py",
+      "destination_path": "engines/known-place/tools/tests/test_know_place_aoi_runner.py",
+      "source_blob_sha": "1a48c7258d97ec4b98dd81d67cc425a73b02f8d8",
+      "source_bytes": 18791
+    },
+    {
+      "source_path": "tools/tests/test_know_place_geometry.py",
+      "destination_path": "engines/known-place/tools/tests/test_know_place_geometry.py",
+      "source_blob_sha": "17d7b56cdb47af6d774c58d8abc9b33903be7144",
+      "source_bytes": 8147
+    },
+    {
+      "source_path": "tools/tests/test_know_place_series.py",
+      "destination_path": "engines/known-place/tools/tests/test_know_place_series.py",
+      "source_blob_sha": "22acef6e41822e4b7f23d2902f467015e4a69099",
+      "source_bytes": 5809
+    },
+    {
+      "source_path": "tools/tests/test_know_place_upload_bundle.py",
+      "destination_path": "engines/known-place/tools/tests/test_know_place_upload_bundle.py",
+      "source_blob_sha": "88bc0c613b05023658555f605104a2570266d7ba",
+      "source_bytes": 12304
+    },
+    {
+      "source_path": "app/storage/drive_client.py",
+      "destination_path": "engines/known-place/app/storage/drive_client.py",
+      "source_blob_sha": "64aef9f7e3b6c4eee63d2ad9e21565be2ebed2a2",
+      "source_bytes": 11000
+    }
+  ]
+}

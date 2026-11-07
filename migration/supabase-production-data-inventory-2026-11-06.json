@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-11-06",
+  "source_project": {
+    "name": "SARGuardian_Dynamic",
+    "ref": "ufwjmhivvnoewjsbteey",
+    "region": "ap-northeast-2",
+    "status": "ACTIVE_HEALTHY"
+  },
+  "target_project": {
+    "name": "SARGuardian-Monorepo",
+    "ref": "qbmhpdprvxssqinnommz",
+    "region": "ap-northeast-1",
+    "status": "ACTIVE_HEALTHY"
+  },
+  "source_data": {
+    "total_rows": 80,
+    "catalog_preflights": {
+      "rows": 3,
+      "distinct_owners": 1,
+      "expired_rows": 3,
+      "referenced_by_processing_jobs": 2,
+      "unreferenced_rows": 1
+    },
+    "processing_jobs": {
+      "rows": 2,
+      "distinct_owners": 1,
+      "states": {
+        "queued": 2
+      }
+    },
+    "displacement_jobs": {
+      "rows": 51,
+      "distinct_owners": 5,
+      "states": {
+        "succeeded": 36,
+        "failed": 14,
+        "cancelled": 1
+      },
+      "non_null_github_run_ids": 44,
+      "active_states": 0
+    },
+    "river_shift_jobs": {
+      "rows": 24,
+      "distinct_owners": 2,
+      "states": {
+        "succeeded": 4,
+        "failed": 20
+      },
+      "non_null_github_run_ids": 23,
+      "active_states": 0
+    }
+  },
+  "target_data": {
+    "total_rows": 0,
+    "catalog_preflights": 0,
+    "processing_jobs": 0,
+    "displacement_jobs": 0,
+    "river_shift_jobs": 0
+  },
+  "schema_comparison": {
+    "table_names_equal": true,
+    "column_name_differences": [],
+    "column_counts": {
+      "catalog_preflights": 7,
+      "processing_jobs": 13,
+      "displacement_jobs": 28,
+      "river_shift_jobs": 27
+    },
+    "rls_enabled_on_all_four_tables": true,
+    "fk_constraints_equal": true,
+    "fk": "processing_jobs.preflight_id -> catalog_preflights.id"
+  },
+  "data_transfer": {
+    "executed": false,
+    "production_modified": false,
+    "approval_required_before_transfer": true,
+    "source_backup_required": true,
+    "target_import_order": [
+      "catalog_preflights",
+      "processing_jobs",
+      "displacement_jobs",
+      "river_shift_jobs"
+    ],
+    "preserve_primary_keys_and_owner_uids": true,
+    "preserve_terminal_state_and_result_metadata": true,
+    "do_not_redispatch_imported_jobs": true,
+    "do_not_copy_raw_nisar_files_or_drive_binary_objects": true,
+    "retain_drive_file_ids_and_verify_read_access": true,
+    "preserve_existing_github_run_ids_and_urls_as_historical_provenance": true,
+    "processing_jobs_queued_rows": "Preserve as queued metadata; do not automatically enqueue or dispatch them during import.",
+    "catalog_preflight_ttl": "Copy all rows needed for FK integrity. The one unreferenced expired preflight remains subject to the existing expiry/grace-period retention policy.",
+    "legacy_run_affinity": "At the final cutover snapshot, recheck active states. The observed displacement and RiverShift jobs are all terminal; if any run is active later, drain it on the original Backend or record its original repository before changing dispatch destinations."
+  },
+  "notes": [
+    "The counts are aggregate-only; no owner UID, AOI WKT, result URL or row payload was read into this report.",
+    "The source/target schemas match by table name, column name/count, RLS setting and FK contract.",
+    "Known Place request/run history is held by GitHub Actions rather than these four Supabase job tables; old Backend runs remain historical evidence.",
+    "Drive result binaries are external objects. Only Drive receipts/IDs and metadata reside in Supabase; access must be verified using the same authorized Drive identity.",
+    "Do not treat the empty Monorepo database as a completed data migration."
+  ]
+}
