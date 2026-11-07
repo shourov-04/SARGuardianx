@@ -1,0 +1,458 @@
+# Generated from sarguardian-aoi-product-worker.yml.
+name: Process one SARGuardian AOI product
+description: Run one isolated product attempt inside a balanced batch runner.
+inputs:
+  aoi_wkt:
+    required: true
+  product_id:
+    required: true
+  granule_name:
+    required: true
+  product_type:
+    required: true
+  maturity:
+    required: true
+  expected_source_bytes:
+    required: true
+  retention_profile:
+    required: true
+  execution_label:
+    required: true
+  job_id:
+    required: false
+    default: ''
+  target_latitude:
+    required: false
+    default: ''
+  target_longitude:
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+  - name: Initialize isolated product attempt
+    shell: bash
+    env:
+      ACTION_PRODUCT_ID: ${{ inputs.product_id }}
+      ACTION_GRANULE_NAME: ${{ inputs.granule_name }}
+      ACTION_PRODUCT_TYPE: ${{ inputs.product_type }}
+      ACTION_MATURITY: ${{ inputs.maturity }}
+      ACTION_EXPECTED_SOURCE_BYTES: ${{ inputs.expected_source_bytes }}
+      ACTION_RETENTION_PROFILE: ${{ inputs.retention_profile }}
+      ACTION_EXECUTION_LABEL: ${{ inputs.execution_label }}
+      ACTION_JOB_ID: ${{ inputs.job_id }}
+      ACTION_TARGET_LATITUDE: ${{ inputs.target_latitude }}
+      ACTION_TARGET_LONGITUDE: ${{ inputs.target_longitude }}
+    run: "set -euo pipefail\nif [[ ! \"$ACTION_PRODUCT_ID\" =~ ^(GUNW|GOFF)-[0-9]{3}$ ]]; then\n  echo \"ERROR=INVALID_BATCH_PRODUCT_ID\" >&2\n  exit 2\nfi\nproduct_root=\"\
+      $RUNNER_TEMP/sarguardian-stream/$ACTION_PRODUCT_ID\"\nprior_root=\"$RUNNER_TEMP/sarguardian-stream/prior-attempt/granule\"\nif [[ \"$ACTION_EXECUTION_LABEL\"\
+      \ != \"initial\" ]]; then\n  case \"$product_root\" in \"$RUNNER_TEMP\"/sarguardian-stream/*) rm -rf -- \"$product_root\" ;; *) exit 2 ;; esac\n  case \"$prior_root\"\
+      \ in \"$RUNNER_TEMP\"/sarguardian-stream/*) rm -rf -- \"$prior_root\" ;; *) exit 2 ;; esac\nfi\n{\n  printf 'PRODUCT_ID=%s\n' \"$ACTION_PRODUCT_ID\"\n  printf\
+      \ 'GRANULE_NAME=%s\n' \"$ACTION_GRANULE_NAME\"\n  printf 'PRODUCT_TYPE=%s\n' \"$ACTION_PRODUCT_TYPE\"\n  printf 'MATURITY=%s\n' \"$ACTION_MATURITY\"\n  printf\
+      \ 'EXPECTED_SOURCE_BYTES=%s\n' \"$ACTION_EXPECTED_SOURCE_BYTES\"\n  printf 'RETENTION_PROFILE=%s\n' \"$ACTION_RETENTION_PROFILE\"\n  printf 'PRODUCT_EXECUTION_LABEL=%s\n\
+      ' \"$ACTION_EXECUTION_LABEL\"\n  printf 'DRIVE_JOB_ID=%s\n' \"$ACTION_JOB_ID\"\n  printf 'TARGET_LATITUDE=%s\n' \"$ACTION_TARGET_LATITUDE\"\n  printf 'TARGET_LONGITUDE=%s\n\
+      ' \"$ACTION_TARGET_LONGITUDE\"\n  printf 'DRIVE_VERSION_TAG=%s-%s-%s\n' \"$GITHUB_RUN_ID\" \"$GITHUB_RUN_ATTEMPT\" \"$ACTION_EXECUTION_LABEL\"\n} >> \"$GITHUB_ENV\"\
+      \n"
+  - name: Download first-attempt evidence for retry identity checks
+    if: inputs.execution_label != 'initial'
+    continue-on-error: true
+    uses: actions/download-artifact@v4
+    with:
+      name: sarguardian-granule-${{ inputs.product_id }}
+      path: ${{ runner.temp }}/sarguardian-stream/prior-attempt/granule
+  - name: Create isolated one-product scratch folders
+    id: paths
+    shell: bash
+    run: "set -euo pipefail\nroot=\"$RUNNER_TEMP/sarguardian-stream/$PRODUCT_ID\"\nmkdir -p \"$root/raw\" \"$root/curated/archive\" \"$root/curated/derived\"\nchmod\
+      \ 700 \"$root\" \"$root/raw\" \"$root/curated\"\necho \"raw_dir=$root/raw\" >> \"$GITHUB_OUTPUT\"\necho \"curated_dir=$root/curated\" >> \"$GITHUB_OUTPUT\"\n\
+      printf 'PRODUCT_PROCESSING_START product_id=%s family=%s execution=%s\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\" \"$PRODUCT_EXECUTION_LABEL\"\n"
+  - name: Download exactly one raw NISAR granule
+    id: download
+    shell: bash
+    env:
+      RAW_DIR: ${{ steps.paths.outputs.raw_dir }}
+    run: "set -euo pipefail\nlog=\"$RUNNER_TEMP/sarguardian-download-$PRODUCT_ID.log\"\n: > \"$log\"\n# Do not redownload a multi-GB product after a failed whole-product\
+      \ attempt.\nmax_attempts=1\nattempt=1\ndownload_ok=0\ndownload_status=1\nwhile (( attempt <= max_attempts )); do\n  attempt_log=\"$RUNNER_TEMP/sarguardian-download-$PRODUCT_ID-attempt-$attempt.log\"\
+      \n  echo \"DOWNLOAD_ATTEMPT=$attempt/$max_attempts\"\n  printf 'PRODUCT_MILESTONE=download_started product_id=%s family=%s attempt=%s/%s\\n' \\\n    \"$PRODUCT_ID\"\
+      \ \"$PRODUCT_TYPE\" \"$attempt\" \"$max_attempts\"\n  if python tools/download_nisar_product.py \\\n    --product-type \"$PRODUCT_TYPE\" --maturity \"$MATURITY\"\
+      \ \\\n    --granule-name \"$GRANULE_NAME\" \\\n    --science-root \"$PWD/science-source\" --aoi \"$AOI_NAME\" \\\n    --expected-source-bytes \"$EXPECTED_SOURCE_BYTES\"\
+      \ \\\n    --out-dir \"$RAW_DIR\" 2>&1 | tee \"$attempt_log\"; then\n    cat \"$attempt_log\" >> \"$log\"\n    download_ok=1\n    break\n  else\n    download_status=$?\n\
+      \    cat \"$attempt_log\" >> \"$log\"\n  fi\n  if ! grep -q '^DOWNLOAD_FAILURE_RETRYABLE=yes$' \"$attempt_log\"; then\n    echo \"DOWNLOAD_RETRY_STOPPED=non_transient_failure\"\
+      \n    break\n  fi\n  if (( attempt >= max_attempts )); then\n    echo \"ERROR=DOWNLOAD_ATTEMPTS_EXHAUSTED attempts=$max_attempts\" | tee -a \"$log\"\n    break\n\
+      \  fi\n  delay=$((15 * (2 ** (attempt - 1))))\n  echo \"DOWNLOAD_RETRY_SCHEDULED next_attempt=$((attempt + 1)) sleep_seconds=$delay\"\n  sleep \"$delay\"\n\
+      \  attempt=$((attempt + 1))\ndone\nif (( download_ok != 1 )); then\n  exit \"$download_status\"\nfi\nraw_path=\"$(sed -n 's/^RAW_PRODUCT_PATH=//p' \"$log\"\
+      \ | tail -n 1)\"\ntest -n \"$raw_path\" && test -f \"$raw_path\"\necho \"raw_path=$raw_path\" >> \"$GITHUB_OUTPUT\"\nprintf 'PRODUCT_MILESTONE=download_completed\
+      \ product_id=%s family=%s\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\n"
+  - name: Verify retry source bytes match the first attempt
+    id: source_identity
+    if: inputs.execution_label != 'initial' && steps.download.outcome == 'success'
+    env:
+      RAW_PATH: ${{ steps.download.outputs.raw_path }}
+      PRIOR_ROOT: ${{ runner.temp }}/sarguardian-stream/prior-attempt/granule
+    shell: bash
+    run: "set -euo pipefail\npython - <<'PY'\nimport json, os\nfrom pathlib import Path\n\nprior_root = Path(os.environ[\"PRIOR_ROOT\"])\nprior_manifest = prior_root\
+      \ / \"download-manifest.json\"\nprior_retention = prior_root / \"drive-retention-receipt.json\"\nprior_metadata = prior_root / \"product-processing.json\"\n\
+      current_raw = Path(os.environ[\"RAW_PATH\"])\ncurrent_manifest = current_raw.parent / \"download-manifest.json\"\nwith open(os.environ[\"GITHUB_OUTPUT\"], \"\
+      a\", encoding=\"utf-8\") as output:\n    output.write(\"same_source=false\\n\")\n\nif not prior_manifest.is_file():\n    if prior_retention.is_file() or prior_metadata.is_file():\n\
+      \        raise SystemExit(\n            \"ERROR=RETRY_PRIOR_RETENTION_EXISTS_WITHOUT_SOURCE_MANIFEST\"\n        )\n    print(\"RETRY_SOURCE_IDENTITY=NO_PRIOR_MANIFEST_NO_PRIOR_RETENTION\"\
+      )\n    raise SystemExit(0)\n\nif not current_manifest.is_file():\n    raise SystemExit(\"ERROR=RETRY_CURRENT_SOURCE_MANIFEST_MISSING\")\nold = json.loads(prior_manifest.read_text(encoding=\"\
+      utf-8\"))\nnew = json.loads(current_manifest.read_text(encoding=\"utf-8\"))\nold_sha = str(old.get(\"source_sha256\", \"\")).lower()\nnew_sha = str(new.get(\"\
+      source_sha256\", \"\")).lower()\nif len(old_sha) != 64 or len(new_sha) != 64:\n    raise SystemExit(\"ERROR=RETRY_SOURCE_SHA256_MISSING_OR_INVALID\")\nif old_sha\
+      \ != new_sha:\n    print(f\"RETRY_PRIOR_SOURCE_SHA256={old_sha}\")\n    print(f\"RETRY_CURRENT_SOURCE_SHA256={new_sha}\")\n    raise SystemExit(\"ERROR=RETRY_SOURCE_BYTES_CHANGED\"\
+      )\nwith open(os.environ[\"GITHUB_OUTPUT\"], \"a\", encoding=\"utf-8\") as output:\n    output.write(\"same_source=true\\n\")\nprint(\"RETRY_SOURCE_IDENTITY=PASS_SOURCE_SHA256_MATCH\"\
+      )\nPY\n"
+  - name: Verify product grid intersects the requested WKT AOI
+    id: aoi_preflight
+    env:
+      RAW_PATH: ${{ steps.download.outputs.raw_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+    shell: bash
+    run: "set -euo pipefail\nprintf 'PRODUCT_MILESTONE=aoi_validation_started product_id=%s family=%s\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\npython tools/validate_product_aoi.py\
+      \ \\\n  --input \"$RAW_PATH\" --product-type \"$PRODUCT_TYPE\" --aoi \"$AOI_NAME\" \\\n  --science-root \"$PWD/science-source\" --science-commit \"$SCIENCE_COMMIT\"\
+      \ \\\n  --out \"$CURATED_DIR/preflight-report.json\"\nprintf 'PRODUCT_MILESTONE=aoi_validation_completed product_id=%s family=%s status=PASS\\n' \\\n  \"$PRODUCT_ID\"\
+      \ \"$PRODUCT_TYPE\"\n"
+  - name: Inventory source datasets and metadata
+    env:
+      RAW_PATH: ${{ steps.download.outputs.raw_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+    shell: bash
+    run: "set -euo pipefail\npython tools/sarguardian_hdf5_archive.py inventory \\\n  --input \"$RAW_PATH\" --product-type \"$PRODUCT_TYPE\" \\\n  --out \"$CURATED_DIR/source-inventory.json\"\
+      \n"
+  - name: Create a full-lossless retained HDF5 copy
+    id: archive
+    if: env.RETENTION_PROFILE == 'full-lossless'
+    env:
+      RAW_PATH: ${{ steps.download.outputs.raw_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+    shell: bash
+    run: "set -euo pipefail\nstem=\"${RAW_PATH##*/}\"\nstem=\"${stem%.*}\"\narchive=\"$CURATED_DIR/archive/${stem}.science.h5\"\nmanifest=\"$CURATED_DIR/${stem}.retention-manifest.json\"\
+      \npython tools/sarguardian_hdf5_archive.py archive \\\n  --input \"$RAW_PATH\" --out \"$archive\" --manifest \"$manifest\" \\\n  --product-type \"$PRODUCT_TYPE\"\
+      \ --retention-profile full-lossless\ntest -s \"$archive\" && test -s \"$manifest\"\necho \"archive_path=$archive\" >> \"$GITHUB_OUTPUT\"\necho \"manifest_path=$manifest\"\
+      \ >> \"$GITHUB_OUTPUT\"\n"
+  - name: Compare raw and retained HDF5 via the scientific reader
+    id: reader_equivalence
+    if: env.RETENTION_PROFILE == 'full-lossless'
+    env:
+      RAW_PATH: ${{ steps.download.outputs.raw_path }}
+      ARCHIVE_PATH: ${{ steps.archive.outputs.archive_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+    shell: bash
+    run: "set -euo pipefail\npython tools/verify_reader_equivalence.py \\\n  --product-type \"$PRODUCT_TYPE\" --source \"$RAW_PATH\" --archive \"$ARCHIVE_PATH\" \\\
+      \n  --science-root \"$PWD/science-source\" --science-commit \"$SCIENCE_COMMIT\" \\\n  --aoi \"$AOI_NAME\" --preflight-report \"$CURATED_DIR/preflight-report.json\"\
+      \ \\\n  --out \"$CURATED_DIR/reader-equivalence.json\"\npython - <<'PY'\nimport json, os\nfrom pathlib import Path\nd = json.loads((Path(os.environ[\"CURATED_DIR\"\
+      ]) / \"reader-equivalence.json\").read_text(encoding=\"utf-8\"))\nif d.get(\"status\") not in {\"PASS\", \"PASS_NO_VALID_AOI_PIXELS\"}:\n    raise SystemExit(\"\
+      ERROR=READER_EQUIVALENCE_NOT_PASSED\")\nprint(f\"READER_EQUIVALENCE_STATUS={d['status']}\")\nPY\n"
+  - name: Run the original single-product reader with dynamic WKT-AOI settings
+    id: reader
+    env:
+      RAW_PATH: ${{ steps.download.outputs.raw_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+    shell: bash
+    run: "set -euo pipefail\nprintf 'PRODUCT_MILESTONE=science_reader_started product_id=%s family=%s\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\nreader_log=\"$CURATED_DIR/derived/science-reader.log\"\
+      \nmkdir -p \"$CURATED_DIR/derived\"\nif [[ \"$PRODUCT_TYPE\" == \"GUNW\" ]]; then\n  stats=\"$CURATED_DIR/derived/gunw_stats_custom.csv\"\n  export_dir=\"$CURATED_DIR/derived/export_custom\"\
+      \n  mkdir -p \"$export_dir\"\n  python science-source/src/gunw_reader.py \\\n    --read \"$RAW_PATH\" --aoi \"$AOI_NAME\" --auto-ref --csv \"$stats\" --export\
+      \ \"$export_dir\" \\\n    2>&1 | tee \"$reader_log\"\nelse\n  stats=\"$CURATED_DIR/derived/goff_stats_custom.csv\"\n  export_dir=\"$CURATED_DIR/derived/export_goff_custom\"\
+      \n  mkdir -p \"$export_dir\"\n  python science-source/src/goff_reader.py \\\n    --read \"$RAW_PATH\" --aoi \"$AOI_NAME\" --layer layer2 --csv \"$stats\" --export\
+      \ \"$export_dir\" \\\n    2>&1 | tee \"$reader_log\"\nfi\n\n# No valid AOI pixels is a diagnostic outcome, not a zero-displacement\n# measurement. Create a\
+      \ row only when every selected reader layer explicitly\n# emits NO VALID PIXELS; mixed/ambiguous reader failures stay failures.\nif [[ ! -s \"$stats\" ]]; then\n\
+      \  python tools/write_no_valid_pixel_stats.py \\\n    --reader-log \"$reader_log\" --stats-csv \"$stats\" \\\n    --raw-product \"$RAW_PATH\" --product-type\
+      \ \"$PRODUCT_TYPE\"\nfi\ntest -s \"$stats\"\necho \"stats_path=$stats\" >> \"$GITHUB_OUTPUT\"\n"
+  - name: Measure pair-local noise floor at the selected in-AOI target
+    id: local_floor
+    if: steps.reader.outcome == 'success'
+    shell: bash
+    env:
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+      PRODUCT_TYPE: ${{ env.PRODUCT_TYPE }}
+      TARGET_LATITUDE: ${{ env.TARGET_LATITUDE }}
+      TARGET_LONGITUDE: ${{ env.TARGET_LONGITUDE }}
+    run: "set -uo pipefail\nroot=\"$CURATED_DIR/derived\"\nmkdir -p \"$root\"\nreport=\"$root/local_floor.json\"\noutput=\"$root/local_floor.csv\"\nexport_dir=\"\
+      $root/export_custom\"\nmatch_args=()\nif [[ \"$PRODUCT_TYPE\" == \"GOFF\" ]]; then\n  export_dir=\"$root/export_goff_custom\"\n  match_args=(--match layer2)\n\
+      fi\nif [[ -z \"$TARGET_LATITUDE\" || -z \"$TARGET_LONGITUDE\" ]]; then\n  python - \"$report\" <<'PY'\nimport json,sys\nwith open(sys.argv[1],\"w\",encoding=\"\
+      utf-8\") as f:\n    json.dump({\"schema_version\":1,\"status\":\"NOT_RUN_NO_IN_AOI_TARGET\",\n               \"reason\":\"No in-AOI target coordinate was supplied;\
+      \ no local floor was inferred.\",\n               \"metric_is_motion\":False},f,indent=2)\nPY\n  echo \"LOCAL_FLOOR_STATUS=NOT_RUN_NO_IN_AOI_TARGET\"\n  echo\
+      \ \"status=NOT_RUN_NO_IN_AOI_TARGET\" >> \"$GITHUB_OUTPUT\"\n  exit 0\nfi\nset +e\npython science-source/src/local_floor.py \\\n  --dir \"$export_dir\" --aoi\
+      \ custom --lat \"$TARGET_LATITUDE\" --lon \"$TARGET_LONGITUDE\" \\\n  \"${match_args[@]}\" --band 1 --sweep 3 6 12 --csv \"$output\" \\\n  > \"$root/local_floor.log\"\
+      \ 2>&1\nrc=$?\nset -e\nif [[ \"$rc\" == \"0\" && -s \"$output\" ]]; then\n  status=\"PAIRWISE_FLOOR_ROWS_WRITTEN\"\nelse\n  status=\"UNAVAILABLE_NO_MEASURABLE_FLOOR\"\
+      \nfi\npython - \"$report\" \"$status\" \"$rc\" \"$TARGET_LATITUDE\" \"$TARGET_LONGITUDE\" \"$output\" <<'PY'\nimport json,os,sys\npath,status,rc,lat,lon,csv_path=sys.argv[1:]\n\
+      with open(path,\"w\",encoding=\"utf-8\") as f:\n    json.dump({\"schema_version\":1,\"status\":status,\"exit_code\":int(rc),\n               \"target\":{\"\
+      latitude\":float(lat),\"longitude\":float(lon),\"aoi\":\"custom\"},\n               \"csv_path\":os.path.relpath(csv_path,os.path.dirname(path)) if os.path.isfile(csv_path)\
+      \ else None,\n               \"metric_is_motion\":False,\n               \"interpretation\":\"Pair-specific spatial noise/detectability estimate around the\
+      \ requested point. Not observed displacement, a common stable-ground reference, cumulative motion or a forecast.\"},\n              f,indent=2,sort_keys=True)\n\
+      PY\necho \"LOCAL_FLOOR_STATUS=$status\"\necho \"status=$status\" >> \"$GITHUB_OUTPUT\"\n"
+  - name: Extract target-local pair measurement from the AOI-clipped raster
+    id: target_measurement
+    if: steps.reader.outcome == 'success'
+    shell: bash
+    env:
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+      PRODUCT_TYPE: ${{ env.PRODUCT_TYPE }}
+      TARGET_LATITUDE: ${{ env.TARGET_LATITUDE }}
+      TARGET_LONGITUDE: ${{ env.TARGET_LONGITUDE }}
+    run: "set -uo pipefail\nroot=\"$CURATED_DIR/derived\"\nmkdir -p \"$root\"\nreport=\"$root/target-measurement.json\"\nexport_dir=\"$root/export_custom\"\nif [[\
+      \ \"$PRODUCT_TYPE\" == \"GOFF\" ]]; then export_dir=\"$root/export_goff_custom\"; fi\nif [[ -z \"$TARGET_LATITUDE\" || -z \"$TARGET_LONGITUDE\" ]]; then\n \
+      \ python - \"$report\" <<'PY'\nimport json,sys\nwith open(sys.argv[1],\"w\",encoding=\"utf-8\") as f:\n    json.dump({\"schema_version\":1,\"status\":\"NOT_RUN_NO_IN_AOI_TARGET\"\
+      ,\"measurements\":{},\n               \"interpretation\":\"No in-AOI target was supplied; no target value was inferred.\"},f,indent=2)\nPY\n  echo \"TARGET_MEASUREMENT_STATUS=NOT_RUN_NO_IN_AOI_TARGET\"\
+      \n  echo \"status=NOT_RUN_NO_IN_AOI_TARGET\" >> \"$GITHUB_OUTPUT\"\n  exit 0\nfi\nraster=\"$(find \"$export_dir\" -maxdepth 1 -type f -name '*.tif' | sort |\
+      \ head -n 1)\"\nif [[ -z \"$raster\" ]]; then\n  echo '{\"schema_version\":1,\"status\":\"UNAVAILABLE_NO_AOI_RASTER\",\"measurements\":{},\"interpretation\"\
+      :\"No validated target raster was available.\"}' > \"$report\"\n  echo \"TARGET_MEASUREMENT_STATUS=UNAVAILABLE_NO_AOI_RASTER\"\n  echo \"status=UNAVAILABLE_NO_AOI_RASTER\"\
+      \ >> \"$GITHUB_OUTPUT\"\n  exit 0\nfi\nset +e\npython tools/measure_target_from_raster.py --raster \"$raster\" --product-type \"$PRODUCT_TYPE\" \\\n  --longitude\
+      \ \"$TARGET_LONGITUDE\" --latitude \"$TARGET_LATITUDE\" --aoi-wkt \"$SARGUARDIAN_AOI_WKT\" --radius-px 3 \\\n  --minimum-valid-pixels 6 --out \"$report\"\n\
+      rc=$?\nset -e\nif [[ ! -s \"$report\" ]]; then\n  python - \"$report\" \"$rc\" <<'PY'\nimport json,sys\nwith open(sys.argv[1],\"w\",encoding=\"utf-8\") as f:\n\
+      \    json.dump({\"schema_version\":1,\"status\":\"UNAVAILABLE_MEASUREMENT_ERROR\",\"exit_code\":int(sys.argv[2]),\n               \"measurements\":{},\"interpretation\"\
+      :\"Target measurement tool did not produce a report.\"},f,indent=2)\nPY\nfi\nstatus=\"$(python - \"$report\" <<'PY'\nimport json,sys\ntry: print(json.load(open(sys.argv[1],encoding=\"\
+      utf-8\")).get(\"status\",\"UNAVAILABLE_MEASUREMENT_ERROR\"))\nexcept Exception: print(\"UNAVAILABLE_MEASUREMENT_ERROR\")\nPY\n)\"\necho \"TARGET_MEASUREMENT_STATUS=$status\"\
+      \necho \"status=$status\" >> \"$GITHUB_OUTPUT\"\n"
+  - name: Validate derived outputs against the AOI-specific structural checks before cleanup
+    id: derived_validation
+    env:
+      STATS_PATH: ${{ steps.reader.outputs.stats_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+    shell: bash
+    run: "set -euo pipefail\nprintf 'PRODUCT_MILESTONE=derived_validation_started product_id=%s family=%s\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\nfamily_lc=\"\
+      $(printf '%s' \"$PRODUCT_TYPE\" | tr '[:upper:]' '[:lower:]')\"\nexport_dir=\"$CURATED_DIR/derived/export_custom\"\nif [[ \"$PRODUCT_TYPE\" == \"GOFF\" ]];\
+      \ then\n  export_dir=\"$CURATED_DIR/derived/export_goff_custom\"\nfi\npython tools/validate_aoi_derived_outputs.py \\\n  --product-id \"$PRODUCT_ID\" --product-type\
+      \ \"$PRODUCT_TYPE\" \\\n  --granule-name \"$GRANULE_NAME\" --aoi-name \"$AOI_NAME\" \\\n  --stats-csv \"$STATS_PATH\" --export-dir \"$export_dir\" \\\n  --out\
+      \ \"$CURATED_DIR/derived-output-validation.json\"\nprintf 'PRODUCT_MILESTONE=derived_validation_completed product_id=%s family=%s status=PASS\\n' \\\n  \"$PRODUCT_ID\"\
+      \ \"$PRODUCT_TYPE\"\n"
+  - name: Build the per-granule processing and retention manifest
+    id: metadata
+    env:
+      ARCHIVE_PATH: ${{ steps.archive.outputs.archive_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+      STATS_PATH: ${{ steps.reader.outputs.stats_path }}
+      RAW_DIR: ${{ steps.paths.outputs.raw_dir }}
+      RETENTION_PROFILE: ${{ env.RETENTION_PROFILE }}
+    shell: bash
+    run: "set -euo pipefail\ncp \"$RAW_DIR/download-manifest.json\" \"$CURATED_DIR/download-manifest.json\"\npython - <<'PY'\nimport csv, hashlib, json, os\nfrom\
+      \ pathlib import Path\nroot = Path(os.environ[\"CURATED_DIR\"]).resolve()\narchive_text = os.environ.get(\"ARCHIVE_PATH\", \"\").strip()\narchive = Path(archive_text).resolve()\
+      \ if archive_text else None\nstats = Path(os.environ[\"STATS_PATH\"]).resolve()\nprofile = os.environ[\"RETENTION_PROFILE\"]\nwith stats.open(newline=\"\",\
+      \ encoding=\"utf-8-sig\") as f:\n    reader = csv.DictReader(f); rows = list(reader); fields = reader.fieldnames or []\ndef canonical_granule_name(value):\n\
+      \    name = Path(str(value or \"\").strip()).name\n    return name[:-3] if name.lower().endswith(\".h5\") else name\nexpected = canonical_granule_name(os.environ[\"\
+      GRANULE_NAME\"])\nif not rows or \"file\" not in fields or any(canonical_granule_name(r.get(\"file\")) != expected for r in rows):\n    raise SystemExit(\"\
+      ERROR=READER_OUTPUT_EMPTY_OR_WRONG_GRANULE\")\nif os.environ[\"PRODUCT_TYPE\"] == \"GUNW\" and len(rows) != 1:\n    raise SystemExit(\"ERROR=GUNW_EXPECTED_ONE_ROW\"\
+      )\nif os.environ[\"PRODUCT_TYPE\"] == \"GOFF\" and (len(rows) != 1 or \"layer2\" not in rows[0].get(\"layer\", \"\").lower()):\n    raise SystemExit(\"ERROR=GOFF_EXPECTED_ONE_LAYER2_ROW\"\
+      )\nvalidation = json.loads((root / \"derived-output-validation.json\").read_text(encoding=\"utf-8\"))\nif validation.get(\"status\") != \"PASS\":\n    raise\
+      \ SystemExit(\"ERROR=DERIVED_OUTPUT_VALIDATION_NOT_PASSED\")\neq_path = root / \"reader-equivalence.json\"\neq = json.loads(eq_path.read_text(encoding=\"utf-8\"\
+      )) if eq_path.is_file() else None\nif profile == \"full-lossless\":\n    if archive is None or not archive.is_file() or eq is None or eq.get(\"status\") not\
+      \ in {\"PASS\", \"PASS_NO_VALID_AOI_PIXELS\"}:\n        raise SystemExit(\"ERROR=FULL_LOSSLESS_REQUIREMENTS_NOT_MET\")\nelif profile == \"derived-only\" and\
+      \ archive is not None:\n    raise SystemExit(\"ERROR=DERIVED_ONLY_MUST_NOT_CREATE_ARCHIVE\")\ninventory = json.loads((root / \"source-inventory.json\").read_text(encoding=\"\
+      utf-8\"))\ndownload = json.loads((root / \"download-manifest.json\").read_text(encoding=\"utf-8\"))\ndef sha256(path):\n    h = hashlib.sha256()\n    with path.open(\"\
+      rb\") as f:\n        for block in iter(lambda: f.read(8*1024*1024), b\"\"):\n            h.update(block)\n    return h.hexdigest()\nexport_dir = root / \"derived\"\
+      \ / (\"export_custom\" if os.environ[\"PRODUCT_TYPE\"] == \"GUNW\" else \"export_goff_custom\")\nexports = [p.relative_to(root).as_posix() for p in sorted(export_dir.rglob(\"\
+      *\")) if p.is_file() and p.suffix.lower() in {\".tif\", \".tiff\"}]\nif not exports:\n    raise SystemExit(\"ERROR=READER_DID_NOT_EXPORT_ANY_GEOTIFF\")\nmetadata\
+      \ = {\n    \"schema_version\": \"sarguardian-stream-product/1.1\",\n    \"id\": os.environ[\"PRODUCT_ID\"], \"product_type\": os.environ[\"PRODUCT_TYPE\"],\n\
+      \    \"maturity\": os.environ[\"MATURITY\"], \"granule_name\": expected, \"aoi\": os.environ[\"AOI_NAME\"],\n    \"science_commit\": os.environ[\"SCIENCE_COMMIT\"\
+      ],\n    \"orchestration_branch\": os.environ[\"AOI_ORCHESTRATION_BRANCH\"],\n    \"orchestration_sha\": os.environ[\"AOI_ORCHESTRATION_SHA\"],\n    \"retention_profile\"\
+      : profile,\n    \"source_file_sha256\": download[\"source_sha256\"], \"source_file_bytes\": download[\"source_bytes\"],\n    \"retained_archive\": archive.relative_to(root).as_posix()\
+      \ if archive else None,\n    \"retained_archive_sha256\": sha256(archive) if archive else None,\n    \"stats_csv\": stats.relative_to(root).as_posix(), \"stats_rows\"\
+      : len(rows),\n    \"export_dir\": export_dir.relative_to(root).as_posix(), \"export_files\": exports,\n    \"derived_output_validation_status\": validation[\"\
+      status\"],\n    \"derived_output_validation\": \"derived-output-validation.json\",\n    \"reader_equivalence_status\": eq[\"status\"] if eq else \"NOT_RUN_DERIVED_ONLY\"\
+      ,\n    \"reader_equivalence_report\": \"reader-equivalence.json\" if eq else None,\n    \"source_dataset_inventory\": \"source-inventory.json\",\n    \"preflight_report\"\
+      : \"preflight-report.json\", \"download_manifest\": \"download-manifest.json\",\n    \"drive_remote_verification\": \"PENDING\", \"local_raw_source_deleted_at_manifest_creation\"\
+      : False,\n    \"local_floor_status\": (json.loads((root / \"derived\" / \"local_floor.json\").read_text(encoding=\"utf-8\")).get(\"status\")\n             \
+      \              if (root / \"derived\" / \"local_floor.json\").is_file() else \"NOT_REPORTED\"),\n    \"local_floor_report\": \"derived/local_floor.json\" if\
+      \ (root / \"derived\" / \"local_floor.json\").is_file() else None,\n    \"local_floor_csv\": \"derived/local_floor.csv\" if (root / \"derived\" / \"local_floor.csv\"\
+      ).is_file() else None,\n    \"target_measurement_status\": (json.loads((root / \"derived\" / \"target-measurement.json\").read_text(encoding=\"utf-8\")).get(\"\
+      status\")\n                                  if (root / \"derived\" / \"target-measurement.json\").is_file() else \"NOT_REPORTED\"),\n    \"target_measurement_report\"\
+      : \"derived/target-measurement.json\" if (root / \"derived\" / \"target-measurement.json\").is_file() else None,\n    \"cleanup_receipt\": \"local-cleanup-receipt.json\"\
+      ,\n    \"source_dataset_inventory_count\": len(inventory.get(\"datasets\", [])),\n    \"excluded_dataset_count\": 0 if profile == \"full-lossless\" else None,\n\
+      \    \"future_reprocessing_note\": (\n        \"Full-lossless HDF5 archive retains all source datasets and attributes.\"\n        if profile == \"full-lossless\"\
+      \ else\n        \"Derived-only: no HDF5 archive is retained; only validated outputs and provenance are preserved.\"\n    ),\n}\n(root / \"product-processing.json\"\
+      ).write_text(json.dumps(metadata, indent=2), encoding=\"utf-8\")\nPY\n"
+  - name: Upload validated per-product outputs to Drive with checksum verification
+    id: drive
+    env:
+      ARCHIVE_PATH: ${{ steps.archive.outputs.archive_path }}
+      MANIFEST_PATH: ${{ steps.archive.outputs.manifest_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+      RETENTION_PROFILE: ${{ env.RETENTION_PROFILE }}
+    shell: bash
+    run: "set -euo pipefail\nprintf 'PRODUCT_MILESTONE=drive_upload_started product_id=%s family=%s\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\nmapfile -t derived_files\
+      \ < <(find \"$CURATED_DIR/derived\" -type f -print | sort)\nfiles=(\n  \"$CURATED_DIR/source-inventory.json\" \"$CURATED_DIR/preflight-report.json\"\n  \"$CURATED_DIR/derived-output-validation.json\"\
+      \ \"$CURATED_DIR/download-manifest.json\"\n  \"${derived_files[@]}\"\n)\nif [[ \"$RETENTION_PROFILE\" == \"full-lossless\" ]]; then\n  test -s \"$ARCHIVE_PATH\"\
+      \ && test -s \"$MANIFEST_PATH\" && test -s \"$CURATED_DIR/reader-equivalence.json\"\n  files+=(\"$ARCHIVE_PATH\" \"$MANIFEST_PATH\" \"$CURATED_DIR/reader-equivalence.json\"\
+      )\nelse\n  if [[ -n \"$ARCHIVE_PATH\" || -e \"$CURATED_DIR/reader-equivalence.json\" ]]; then\n    echo \"ERROR=UNEXPECTED_ARCHIVE_ARTIFACT_IN_DERIVED_ONLY\"\
+      \ >&2\n    exit 2\n  fi\nfi\nretry_upload_flags=()\nif [[ \"$PRODUCT_EXECUTION_LABEL\" != \"initial\" ]]; then\n  # The version-tag is unique to this workflow\
+      \ run/attempt.\n  retry_upload_flags+=(--existing-files-are-new)\nfi\nif [[ \"${{ steps.source_identity.outputs.same_source || 'false' }}\" == \"true\" ]];\
+      \ then\n  retry_upload_flags+=(--replace-existing-retry-sidecars)\nfi\npython tools/drive_resumable_upload.py \"${retry_upload_flags[@]}\" \\\n  --root \"$CURATED_DIR\"\
+      \ --product-type \"$PRODUCT_TYPE\" --maturity \"$MATURITY\" \\\n  --granule-name \"$GRANULE_NAME\" --version-tag \"$DRIVE_VERSION_TAG\" --files \"${files[@]}\"\
+      \ \\\n  --job-id \"$DRIVE_JOB_ID\" \\\n  --out \"$CURATED_DIR/drive-retention-receipt.json\"\npython - <<'PY'\nimport json, os\nfrom pathlib import Path\nroot=Path(os.environ[\"\
+      CURATED_DIR\"])\nreceipt=json.loads((root/\"drive-retention-receipt.json\").read_text(encoding=\"utf-8\"))\nmeta_path=root/\"product-processing.json\"\nmeta=json.loads(meta_path.read_text(encoding=\"\
+      utf-8\"))\nif receipt.get(\"remote_verification\") != \"PASS\":\n    raise SystemExit(\"ERROR=DRIVE_OUTPUTS_NOT_REMOTELY_VERIFIED\")\nuploaded={str(item.get(\"\
+      name\",\"\")) for item in receipt.get(\"files\", [])}\nrequired={\"source-inventory.json\",\"preflight-report.json\",\"derived-output-validation.json\",\"download-manifest.json\"\
+      }\nrequired.add(Path(meta[\"stats_csv\"]).name)\nrequired.update(Path(rel).name for rel in meta[\"export_files\"])\nmissing=sorted(required-uploaded)\nif missing:\n\
+      \    raise SystemExit(\"ERROR=REMOTE_OUTPUT_MISSING names=\"+\",\".join(missing))\narchives=[name for name in uploaded if name.endswith(\".science.h5\")]\n\
+      if meta[\"retention_profile\"] == \"full-lossless\" and len(archives) != 1:\n    raise SystemExit(\"ERROR=FULL_LOSSLESS_ARCHIVE_NOT_FOUND_IN_DRIVE_RECEIPT\"\
+      )\nif meta[\"retention_profile\"] == \"derived-only\" and archives:\n    raise SystemExit(\"ERROR=ARCHIVE_PRESENT_IN_DERIVED_ONLY_DRIVE_RECEIPT\")\nmeta[\"\
+      drive_remote_verification\"]=\"PASS\"\nmeta[\"drive_remote_folder_id\"]=receipt.get(\"remote_folder_id\")\nmeta[\"drive_retention_receipt\"]=\"drive-retention-receipt.json\"\
+      \nmeta_path.write_text(json.dumps(meta,indent=2),encoding=\"utf-8\")\nPY\nmetadata_retry_flags=()\nif [[ \"$PRODUCT_EXECUTION_LABEL\" != \"initial\" ]]; then\n\
+      \  metadata_retry_flags+=(--existing-files-are-new)\nfi\nif [[ \"${{ steps.source_identity.outputs.same_source || 'false' }}\" == \"true\" ]]; then\n  metadata_retry_flags+=(--replace-existing-retry-sidecars)\n\
+      fi\npython tools/drive_resumable_upload.py \"${metadata_retry_flags[@]}\" \\\n  --root \"$CURATED_DIR\" --product-type \"$PRODUCT_TYPE\" --maturity \"$MATURITY\"\
+      \ \\\n  --granule-name \"$GRANULE_NAME\" --version-tag \"$DRIVE_VERSION_TAG\" \\\n  --job-id \"$DRIVE_JOB_ID\" \\\n  --files \"$CURATED_DIR/product-processing.json\"\
+      \ \"$CURATED_DIR/drive-retention-receipt.json\" \\\n  --out \"$CURATED_DIR/drive-metadata-upload-receipt.json\"\npython - <<'PY'\nimport json, os\nfrom pathlib\
+      \ import Path\nroot=Path(os.environ[\"CURATED_DIR\"])\nreceipt=json.loads((root/\"drive-metadata-upload-receipt.json\").read_text(encoding=\"utf-8\"))\nif receipt.get(\"\
+      remote_verification\") != \"PASS\":\n    raise SystemExit(\"ERROR=DRIVE_METADATA_NOT_REMOTELY_VERIFIED\")\nuploaded={str(item.get(\"name\",\"\")) for item in\
+      \ receipt.get(\"files\", [])}\nif not {\"product-processing.json\",\"drive-retention-receipt.json\"}.issubset(uploaded):\n    raise SystemExit(\"ERROR=DRIVE_METADATA_RECEIPT_FILES_MISSING\"\
+      )\nprint(f\"DRIVE_VALIDATED_OUTPUTS_VERIFIED={len(receipt.get('files', []))}\")\nPY\nprintf 'PRODUCT_MILESTONE=drive_upload_completed product_id=%s family=%s\
+      \ status=PASS\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\n"
+  - name: Write a compact diagnostic receipt even when a product fails
+    if: always()
+    env:
+      RUN_ROOT: ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}
+      DOWNLOAD_LOG: ${{ runner.temp }}/sarguardian-download-${{ inputs.product_id }}.log
+      DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+      AOI_PREFLIGHT_OUTCOME: ${{ steps.aoi_preflight.outcome }}
+      ARCHIVE_OUTCOME: ${{ steps.archive.outcome }}
+      READER_EQUIVALENCE_OUTCOME: ${{ steps.reader_equivalence.outcome }}
+      READER_OUTCOME: ${{ steps.reader.outcome }}
+      DRIVE_OUTCOME: ${{ steps.drive.outcome }}
+    shell: bash
+    run: "set -euo pipefail\nmkdir -p \"$RUN_ROOT/curated\"\npython - <<'PY'\nimport json, os\nfrom pathlib import Path\nroot = Path(os.environ[\"RUN_ROOT\"])\ncurated\
+      \ = root / \"curated\"\ndownload_log = Path(os.environ[\"DOWNLOAD_LOG\"])\ndiagnostic_prefixes = (\n    \"ERROR=\",\n    \"DIRECT_PRODUCT_DIAGNOSTIC=\",\n \
+      \   \"SOURCE_ACQUISITION_MODULE=\",\n    \"DISCOVERY_FALLBACK=\",\n    \"DIRECT_PRODUCT_HTTP_404=\",\n    \"NETWORK_RETRY=\",\n    \"DOWNLOAD_FAILURE_RETRYABLE=\"\
+      ,\n)\ndownload_diagnostics = []\nif download_log.is_file():\n    for raw_line in download_log.read_text(encoding=\"utf-8\", errors=\"replace\").splitlines():\n\
+      \        line = raw_line.strip()\n        if line.startswith(diagnostic_prefixes):\n            download_diagnostics.append(line[:420])\ndownload_diagnostics\
+      \ = download_diagnostics[:16]\ndownload_error_code = next(\n    (line for line in download_diagnostics if line.startswith(\"ERROR=\")),\n    None,\n) if os.environ.get(\"\
+      DOWNLOAD_OUTCOME\") == \"failure\" else None\nrecord = {\n    \"schema_version\": \"sarguardian-product-run-diagnostic/1.0\",\n    \"product_id\": os.environ.get(\"\
+      PRODUCT_ID\"),\n    \"product_type\": os.environ.get(\"PRODUCT_TYPE\"),\n    \"granule_name\": os.environ.get(\"GRANULE_NAME\"),\n    \"aoi\": os.environ[\"\
+      AOI_NAME\"],\n    \"science_commit\": os.environ.get(\"SCIENCE_COMMIT\"),\n    \"step_outcomes\": {\n        \"download\": os.environ.get(\"DOWNLOAD_OUTCOME\"\
+      ),\n        \"aoi_preflight\": os.environ.get(\"AOI_PREFLIGHT_OUTCOME\"),\n        \"archive\": os.environ.get(\"ARCHIVE_OUTCOME\"),\n        \"reader_equivalence\"\
+      : os.environ.get(\"READER_EQUIVALENCE_OUTCOME\"),\n        \"reader\": os.environ.get(\"READER_OUTCOME\"),\n        \"drive\": os.environ.get(\"DRIVE_OUTCOME\"\
+      ),\n    },\n    \"download_error_code\": download_error_code,\n    \"download_diagnostics\": download_diagnostics,\n    \"download_manifest_created\": (curated\
+      \ / \"download-manifest.json\").is_file(),\n    \"raw_hdf5_present_at_diagnostic_time\": any(root.glob(\"raw/**/*.h5\")),\n    \"retained_archive_created\"\
+      : any((curated / \"archive\").glob(\"*.science.h5\")),\n    \"drive_receipt_created\": (curated / \"drive-retention-receipt.json\").is_file(),\n    \"local_raw_delete_step_is_gated_on_success\"\
+      : True,\n}\n(curated / \"product-run-diagnostics.json\").write_text(\n    json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\", encoding=\"utf-8\"\n)\n\
+      print(\"PRODUCT_RUN_DIAGNOSTICS_WRITTEN=\" + str(curated / \"product-run-diagnostics.json\"))\nPY\n"
+  - name: Upload verified per-granule checkpoint for final aggregation
+    if: always() && (inputs.execution_label == 'initial' || steps.drive.outcome == 'success')
+    uses: actions/upload-artifact@v4
+    with:
+      name: sarguardian-granule-${{ inputs.product_id }}
+      overwrite: true
+      path: '${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/product-run-diagnostics.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/product-processing.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/reader-equivalence.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/derived-output-validation.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/source-inventory.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/preflight-report.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/download-manifest.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/*retention-manifest.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/drive-retention-receipt.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/drive-metadata-upload-receipt.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/derived/**
+
+        '
+      if-no-files-found: error
+      retention-days: 14
+  - name: Preserve retry diagnostics without replacing a prior checkpoint
+    if: always() && inputs.execution_label != 'initial' && steps.drive.outcome != 'success'
+    uses: actions/upload-artifact@v4
+    with:
+      name: sarguardian-retry-diagnostic-${{ inputs.product_id }}-${{ inputs.execution_label }}
+      path: ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/product-run-diagnostics.json
+      if-no-files-found: warn
+      retention-days: 14
+  - name: Delete local raw/archive only after successful remote retention
+    id: cleanup
+    if: success()
+    env:
+      RAW_PATH: ${{ steps.download.outputs.raw_path }}
+      ARCHIVE_PATH: ${{ steps.archive.outputs.archive_path }}
+      CURATED_DIR: ${{ steps.paths.outputs.curated_dir }}
+      PRODUCT_ID: ${{ inputs.product_id }}
+      GRANULE_NAME: ${{ inputs.granule_name }}
+      PRODUCT_TYPE: ${{ inputs.product_type }}
+      MATURITY: ${{ inputs.maturity }}
+      DRIVE_VERSION_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
+      SCIENCE_COMMIT: ${{ env.SCIENCE_COMMIT }}
+      RETENTION_PROFILE: ${{ env.RETENTION_PROFILE }}
+    shell: bash
+    run: "set -euo pipefail\nprintf 'PRODUCT_MILESTONE=cleanup_started product_id=%s family=%s\\n' \\\n  \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\npython - <<'PY'\nimport\
+      \ json, os\nfrom pathlib import Path\nroot=Path(os.environ[\"CURATED_DIR\"])\nmeta=json.loads((root/\"product-processing.json\").read_text(encoding=\"utf-8\"\
+      ))\nretention=json.loads((root/\"drive-retention-receipt.json\").read_text(encoding=\"utf-8\"))\nvalidation=json.loads((root/\"derived-output-validation.json\"\
+      ).read_text(encoding=\"utf-8\"))\nif validation.get(\"status\") != \"PASS\" or meta.get(\"derived_output_validation_status\") != \"PASS\":\n    raise SystemExit(\"\
+      ERROR=REFUSING_RAW_DELETION_WITHOUT_DERIVED_BASELINE_VALIDATION\")\nif meta.get(\"drive_remote_verification\") != \"PASS\" or retention.get(\"remote_verification\"\
+      ) != \"PASS\":\n    raise SystemExit(\"ERROR=REFUSING_RAW_DELETION_WITHOUT_REMOTE_VERIFICATION\")\nif meta.get(\"drive_remote_folder_id\") != retention.get(\"\
+      remote_folder_id\"):\n    raise SystemExit(\"ERROR=REMOTE_RETENTION_FOLDER_ID_MISMATCH\")\nnames={str(x.get(\"name\",\"\")) for x in retention.get(\"files\"\
+      , [])}\nrequired={\"source-inventory.json\",\"preflight-report.json\",\"derived-output-validation.json\",\"download-manifest.json\"}\nrequired.add(Path(meta[\"\
+      stats_csv\"]).name)\nrequired.update(Path(rel).name for rel in meta[\"export_files\"])\nmissing=sorted(required-names)\nif missing:\n    raise SystemExit(\"\
+      ERROR=REMOTE_REQUIRED_DERIVED_OUTPUT_MISSING names=\"+\",\".join(missing))\narchives=[r for r in retention.get(\"files\", []) if str(r.get(\"name\",\"\")).endswith(\"\
+      .science.h5\")]\narchive_path=os.environ.get(\"ARCHIVE_PATH\",\"\").strip()\nif meta[\"retention_profile\"] == \"full-lossless\":\n    eq=json.loads((root/\"\
+      reader-equivalence.json\").read_text(encoding=\"utf-8\"))\n    if len(archives)!=1 or not archive_path or eq.get(\"status\") not in {\"PASS\",\"PASS_NO_VALID_AOI_PIXELS\"\
+      }:\n        raise SystemExit(\"ERROR=FULL_LOSSLESS_ARCHIVE_OR_EQUIVALENCE_NOT_VERIFIED\")\nelif meta[\"retention_profile\"] == \"derived-only\":\n    if archives\
+      \ or archive_path:\n        raise SystemExit(\"ERROR=ARCHIVE_PRESENT_IN_DERIVED_ONLY_RETENTION\")\nelse:\n    raise SystemExit(\"ERROR=RETENTION_PROFILE_INVALID\"\
+      )\nprint(\"REMOTE_DERIVED_OUTPUTS_AND_RETENTION_POLICY_VERIFIED=PASS\")\nPY\nrm -f -- \"$RAW_PATH\"\ntest ! -e \"$RAW_PATH\"\narchive_path=\"${ARCHIVE_PATH:-}\"\
+      \nif [[ -n \"$archive_path\" ]]; then\n  test -f \"$archive_path\"\n  rm -f -- \"$archive_path\"\n  test ! -e \"$archive_path\"\nfi\npython - <<'PY'\nimport\
+      \ json, os\nfrom datetime import datetime, timezone\nfrom pathlib import Path\nroot=Path(os.environ[\"CURATED_DIR\"])\nmeta=json.loads((root/\"product-processing.json\"\
+      ).read_text(encoding=\"utf-8\"))\ndownload=json.loads((root/\"download-manifest.json\").read_text(encoding=\"utf-8\"))\nretention=json.loads((root/\"drive-retention-receipt.json\"\
+      ).read_text(encoding=\"utf-8\"))\nraw_exists=Path(os.environ[\"RAW_PATH\"]).exists()\narchive_path=os.environ.get(\"ARCHIVE_PATH\",\"\").strip()\narchive_exists=Path(archive_path).exists()\
+      \ if archive_path else False\nif raw_exists or archive_exists or retention.get(\"remote_verification\")!=\"PASS\":\n    raise SystemExit(\"ERROR=LOCAL_CLEANUP_RECEIPT_GATE_FAILED\"\
+      )\narchive_files=[r for r in retention.get(\"files\",[]) if str(r.get(\"name\",\"\")).endswith(\".science.h5\")]\nif meta[\"retention_profile\"]==\"full-lossless\"\
+      \ and len(archive_files)!=1:\n    raise SystemExit(\"ERROR=FULL_LOSSLESS_ARCHIVE_RECEIPT_MISSING\")\nif meta[\"retention_profile\"]==\"derived-only\" and archive_files:\n\
+      \    raise SystemExit(\"ERROR=DERIVED_ONLY_ARCHIVE_MUST_NOT_BE_RETAINED\")\nrecord={\n    \"schema_version\":\"sarguardian-local-cleanup-receipt/1.1\",\n  \
+      \  \"created_utc\":datetime.now(timezone.utc).isoformat(),\n    \"product_id\":os.environ[\"PRODUCT_ID\"], \"product_type\":os.environ[\"PRODUCT_TYPE\"],\n\
+      \    \"maturity\":os.environ[\"MATURITY\"], \"granule_name\":os.environ[\"GRANULE_NAME\"],\n    \"aoi\":os.environ[\"AOI_NAME\"], \"science_commit\":os.environ[\"\
+      SCIENCE_COMMIT\"],\n    \"retention_profile\":meta[\"retention_profile\"],\n    \"source_file_sha256\":download[\"source_sha256\"],\n    \"retained_archive_name\"\
+      :archive_files[0][\"name\"] if archive_files else None,\n    \"retained_archive_sha256\":meta.get(\"retained_archive_sha256\"),\n    \"remote_retention_verification\"\
+      :\"PASS\",\n    \"remote_retention_folder_id\":retention[\"remote_folder_id\"],\n    \"runner_raw_hdf5_deleted\":True,\n    \"runner_archive_deleted\":not archive_exists,\n\
+      \    \"runner_paths_stored\":False,\n    \"cleanup_scope\":(\n      \"temporary runner raw and archive deleted; remote full-lossless archive remains retained\"\
+      \n      if meta[\"retention_profile\"]==\"full-lossless\" else\n      \"temporary runner raw deleted after verified derived-only outputs; no HDF5 archive retained\"\
+      \n    )\n}\n(root/\"local-cleanup-receipt.json\").write_text(json.dumps(record,indent=2),encoding=\"utf-8\")\nprint(\"LOCAL_RAW_AND_POLICY_REQUIRED_ARCHIVE_COPIES_DELETED_AFTER_REMOTE_VERIFICATION=yes\"\
+      )\nPY\ncleanup_retry_flags=()\nif [[ \"$PRODUCT_EXECUTION_LABEL\" != \"initial\" ]]; then\n  cleanup_retry_flags+=(--existing-files-are-new)\nfi\nif [[ \"${{\
+      \ steps.source_identity.outputs.same_source || 'false' }}\" == \"true\" ]]; then\n  cleanup_retry_flags+=(--replace-existing-retry-sidecars)\nfi\npython tools/drive_resumable_upload.py\
+      \ \"${cleanup_retry_flags[@]}\" \\\n  --root \"$CURATED_DIR\" --product-type \"$PRODUCT_TYPE\" --maturity \"$MATURITY\" \\\n  --granule-name \"$GRANULE_NAME\"\
+      \ --version-tag \"$DRIVE_VERSION_TAG\" \\\n  --job-id \"$DRIVE_JOB_ID\" \\\n  --files \"$CURATED_DIR/local-cleanup-receipt.json\" \\\n  --out \"$CURATED_DIR/drive-cleanup-upload-receipt.json\"\
+      \npython - <<'PY'\nimport json, os\nfrom pathlib import Path\nroot=Path(os.environ[\"CURATED_DIR\"])\nreceipt=json.loads((root/\"drive-cleanup-upload-receipt.json\"\
+      ).read_text(encoding=\"utf-8\"))\nif receipt.get(\"remote_verification\") != \"PASS\":\n    raise SystemExit(\"ERROR=LOCAL_CLEANUP_RECEIPT_NOT_REMOTELY_VERIFIED\"\
+      )\nif not any(r.get(\"name\")==\"local-cleanup-receipt.json\" for r in receipt.get(\"files\", [])):\n    raise SystemExit(\"ERROR=LOCAL_CLEANUP_RECEIPT_MISSING_FROM_DRIVE_RECEIPT\"\
+      )\nprint(\"LOCAL_CLEANUP_RECEIPT_DRIVE_VERIFIED=PASS\")\nPY\nprintf 'PRODUCT_MILESTONE=cleanup_completed product_id=%s family=%s status=PASS\\n' \\\n  \"$PRODUCT_ID\"\
+      \ \"$PRODUCT_TYPE\"\n"
+  - name: Upload verified post-cleanup checkpoint for aggregation
+    if: always() && (inputs.execution_label == 'initial' || steps.cleanup.outcome == 'success')
+    uses: actions/upload-artifact@v4
+    with:
+      name: sarguardian-cleanup-${{ inputs.product_id }}
+      overwrite: true
+      path: '${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/local-cleanup-receipt.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/drive-cleanup-upload-receipt.json
+
+        '
+      if-no-files-found: warn
+      retention-days: 14
+  - name: Preserve retry cleanup diagnostics without replacing a prior checkpoint
+    if: always() && inputs.execution_label != 'initial' && steps.cleanup.outcome != 'success'
+    uses: actions/upload-artifact@v4
+    with:
+      name: sarguardian-retry-cleanup-diagnostic-${{ inputs.product_id }}-${{ inputs.execution_label }}
+      path: '${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/local-cleanup-receipt.json
+
+        ${{ runner.temp }}/sarguardian-stream/${{ inputs.product_id }}/curated/drive-cleanup-upload-receipt.json
+
+        '
+      if-no-files-found: warn
+      retention-days: 14
+  - name: Report product completion status
+    if: always()
+    env:
+      DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+      AOI_PREFLIGHT_OUTCOME: ${{ steps.aoi_preflight.outcome }}
+      READER_OUTCOME: ${{ steps.reader.outcome }}
+      DERIVED_VALIDATION_OUTCOME: ${{ steps.derived_validation.outcome }}
+      DRIVE_OUTCOME: ${{ steps.drive.outcome }}
+      CLEANUP_OUTCOME: ${{ steps.cleanup.outcome }}
+    shell: bash
+    run: "set -euo pipefail\nstatus=failed\nif [[ \"$CLEANUP_OUTCOME\" == \"success\" ]]; then status=completed; fi\nprintf 'PRODUCT_PROCESSING_STATUS=%s product_id=%s\
+      \ family=%s execution=%s download=%s aoi_validation=%s reader=%s derived_validation=%s upload=%s cleanup=%s\\n' \\\n  \"$status\" \"$PRODUCT_ID\" \"$PRODUCT_TYPE\"\
+      \ \"$PRODUCT_EXECUTION_LABEL\" \\\n  \"$DOWNLOAD_OUTCOME\" \"$AOI_PREFLIGHT_OUTCOME\" \"$READER_OUTCOME\" \\\n  \"$DERIVED_VALIDATION_OUTCOME\" \"$DRIVE_OUTCOME\"\
+      \ \"$CLEANUP_OUTCOME\"\n"
